@@ -48,17 +48,10 @@ Route::get('/verify-email', function () {
 })->middleware('auth')->name('verification.notice');
 
 
-// 🔹 AUTH ROUTES (Laravel Default)
-// Make sure you installed Laravel Breeze / UI / Jetstream
-// Example: php artisan breeze:install
-
-// routes/web.php
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 
-
-
 // 🔹 DASHBOARD (After Login)
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'role:organizer'])->group(function () {
 
     Route::get('/dashboard', function () {
         return view('dashboard'); // we will create this later
@@ -93,7 +86,7 @@ Route::get('/organizers/{user}', [OrganizerController::class, 'publicProfile'])
     ->name('organizers.public');
 
 // 🔹 ORGANIZER ROUTES (ONLY LOGGED IN + ORGANIZER ROLE)
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'role:organizer'])->group(function () {
     // Create Tournament
     Route::get('/dashboard/tournaments/create', [TournamentController::class, 'create'])
         ->name('tournaments.create');
@@ -163,7 +156,7 @@ Route::middleware(['auth'])->group(function () {
 
 
 
-Route::middleware(['auth'])
+Route::middleware(['auth', 'role:player,organizer'])
     ->prefix('player')
     ->name('player.')
     ->group(function () {

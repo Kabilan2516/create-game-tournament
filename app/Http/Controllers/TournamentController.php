@@ -560,7 +560,13 @@ class TournamentController extends Controller
             $mode = strtolower($tournament->mode);   // SOLO / DUO / SQUAD from DB
             $entryFee = $isPaidTournament ? $tournament->entry_fee : 0;
 
-            $isAutoApproved = $tournament->auto_approve && !$tournament->is_paid;
+            $isAutoApproved =
+                $tournament->auto_approve &&
+                (
+                    !$tournament->is_paid ||
+                    ($tournament->is_paid && $request->hasFile('payment_proof'))
+                );
+
 
             $finalStatus = $isAutoApproved ? 'approved' : 'pending';
 
@@ -597,29 +603,32 @@ class TournamentController extends Controller
             ]);
 
             // 🔹 SAVE TEAM MEMBERS (ONLY IF DUO / SQUAD)
-            if (in_array($mode, ['duo', 'squad']) && $request->has('members')) {
-
+            if (in_array($mode, ['duo', 'squad']) && is_array($request->members)) {
                 foreach ($request->members as $member) {
-
-                    // skip empty rows
-                    if (empty($member['ign']) && empty($member['game_id'])) {
+                    if (
+                        empty($member['ign']) ||
+                        empty($member['game_id'])
+                    ) {
                         continue;
                     }
 
                     TournamentJoinMember::create([
                         'tournament_join_id' => $join->id,
-                        'ign'     => $member['ign'],
+                        'ign' => $member['ign'],
                         'game_id' => $member['game_id'],
                     ]);
                 }
             }
 
+
             // 🔹 SAVE PAYMENT PROOF (IF PAID TOURNAMENT)
             if ($isPaidTournament && $request->hasFile('payment_proof')) {
-
-                // using your media system
-                $join->addMedia($request->file('payment_proof'))
-                    ->toMediaCollection('payment_proof');
+                MediaUploadService::upload(
+                    $request->file('payment_proof'),
+                    $join,
+                    'payment_proof',
+                    'tournament-joins/payment-proofs'
+                );
             }
 
             if ($finalStatus === 'approved') {
@@ -671,8 +680,6 @@ class TournamentController extends Controller
             ]);
         }
     }
-
-
 
     // Organizer - My Tournaments
     public function myTournaments()

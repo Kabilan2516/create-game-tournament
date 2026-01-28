@@ -45,9 +45,14 @@
 
                     <!-- TEAM NAME -->
                     <div>
-                        <label class="text-sm text-gray-400">Player / Team Name *</label>
-                        <input type="text" name="team_name" required
+                        <label class="text-sm text-gray-400">
+                            {{ strtolower($tournament->mode) === 'solo' ? 'Player Name' : 'Team Name' }} *
+                        </label>
+
+                        <input type="text" name="team_name"
+                            {{ strtolower($tournament->mode) === 'solo' ? '' : 'required' }}
                             class="w-full mt-1 px-4 py-3 rounded bg-slate-800 border border-slate-700">
+
                     </div>
 
                     <!-- CAPTAIN INFO -->
@@ -214,17 +219,23 @@
                 members: [],
 
                 init() {
-                    this.updateMembers(mode);
+                    this.setMembers(mode);
                 },
 
-                updateMembers(mode) {
+                setMembers(mode) {
                     this.members = [];
 
-                    if (mode === 'duo') this.members = [{}, {}];
-                    if (mode === 'squad') this.members = [{}, {}, {}, {}];
+                    if (mode === 'duo') {
+                        this.members = [{}]; // 1 extra member
+                    }
+
+                    if (mode === 'squad') {
+                        this.members = [{}, {}, {}]; // 3 extra members
+                    }
                 }
             }
         }
     </script>
+
 
 @endsection

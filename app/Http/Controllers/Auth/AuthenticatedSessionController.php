@@ -20,9 +20,23 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $user = auth()->user();
+
+        if ($user->role === 'organizer') {
             return redirect()->intended(route('dashboard'))
-        ->with('auth.login.success', '✅ Login successful. Welcome back!');
+                ->with('auth.login.success', '✅ Login successful. Welcome back!');
+        }
+
+        if ($user->role === 'player') {
+            return redirect()->intended(route('player.dashboard'))
+                ->with('auth.login.success', '✅ Login successful. Welcome back!');
+        }
+
+        // Fallback (safety)
+        return redirect('/')
+            ->with('auth.login.success', '✅ Login successful.');
     }
+
 
     /**
      * Destroy an authenticated session.
@@ -35,7 +49,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        
+
         return redirect('/')->with('auth.logout.success', '👋 You have been logged out successfully.');
     }
 }
