@@ -73,7 +73,10 @@
 
     <!-- 🔹 REQUESTS TABLE -->
     <section class="px-8 py-10">
-      <form method="POST" id="bulkForm">
+     <form method="POST"
+      action="{{ route('organizer.requests.bulk', $tournament) }}"
+      id="bulkForm">
+
 
     @csrf
 

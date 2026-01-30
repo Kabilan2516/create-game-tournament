@@ -8,13 +8,30 @@ use Illuminate\Support\Facades\Auth;
 
 class OrganizerResultController extends Controller
 {
-      public function create(Tournament $tournament)
-    {
-        // Security
-        abort_if($tournament->organizer_id !== Auth::id(), 403);
+public function create(Tournament $tournament)
+{
+    // 🔐 Security
+    abort_if($tournament->organizer_id !== Auth::id(), 403);
 
-        return view('organizer.results.upload', compact('tournament'));
-    }
+    // 🔒 Match must be started
+    abort_if(now()->lt($tournament->start_time), 403);
+
+    // ✅ LOAD APPROVED JOINS + MEMBERS
+    $joins = $tournament->joins()
+        ->where('status', 'approved')
+        ->with('members')
+        ->orderBy('id')
+        ->get();
+
+    return view('organizer.results.upload', [
+        'tournament' => $tournament,
+        'joins'      => $joins,
+    ]);
+}
+
+
+
+
 
     public function store(Request $request, Tournament $tournament)
     {

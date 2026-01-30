@@ -868,6 +868,102 @@ class TournamentController extends Controller
 
         return back()->with('success', '❌ Join rejected & message saved in chat.');
     }
+    public function bulkAction(Request $request, Tournament $tournament)
+    {
+        // 🔐 Security
+        if ($tournament->organizer_id !== Auth::id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $request->validate([
+            'selected_joins' => 'required|array|min:1',
+            'action' => 'required|in:approve,reject,send_mail',
+        ]);
+
+        $joins = TournamentJoin::whereIn('id', $request->selected_joins)
+            ->where('tournament_id', $tournament->id)
+            ->get();
+
+        if ($joins->isEmpty()) {
+            return back()->withErrors(['error' => 'No valid join requests selected.']);
+        }
+
+        foreach ($joins as $join) {
+
+            // ✅ APPROVE
+            if ($request->action === 'approve') {
+
+                if ($join->status !== 'pending') {
+                    continue;
+                }
+
+                if ($tournament->filled_slots >= $tournament->slots) {
+                    break; // tournament full
+                }
+
+                $join->update(['status' => 'approved']);
+                $tournament->increment('filled_slots');
+
+                TournamentJoinMessage::create([
+                    'tournament_join_id' => $join->id,
+                    'sender' => 'organizer',
+                    'message' =>
+                    "✅ Your team has been APPROVED for the tournament:\n\n" .
+                        "🏆 {$tournament->title}\n" .
+                        "🎮 Mode: " . ucfirst($join->mode) . "\n" .
+                        "🆔 Join ID: {$join->join_code}\n\n" .
+                        "Room details will be shared soon.",
+                    'is_read' => false,
+                ]);
+            }
+
+            // ❌ REJECT
+            if ($request->action === 'reject') {
+
+                if ($join->status !== 'pending') {
+                    continue;
+                }
+
+                $join->update([
+                    'status' => 'rejected',
+                    'reject_reason' => 'Rejected by organizer (bulk action)',
+                ]);
+
+                TournamentJoinMessage::create([
+                    'tournament_join_id' => $join->id,
+                    'sender' => 'organizer',
+                    'message' =>
+                    "❌ Your request for *{$tournament->title}* has been rejected.\n\n" .
+                        "Reason: Organizer bulk action.",
+                    'is_read' => false,
+                ]);
+            }
+
+            // 📧 SEND ROOM DETAILS
+            if ($request->action === 'send_mail') {
+
+                if ($join->status !== 'approved') {
+                    continue;
+                }
+
+                $join->update(['room_visible' => true]);
+
+                TournamentJoinMessage::create([
+                    'tournament_join_id' => $join->id,
+                    'sender' => 'organizer',
+                    'message' =>
+                    "📧 Room details are now available.\n\n" .
+                        "Please check tournament room info before match time.",
+                    'is_read' => false,
+                ]);
+            }
+        }
+
+        return back()->with(
+            'success',
+            '✅ Bulk action "' . ucfirst(str_replace('_', ' ', $request->action)) . '" completed successfully.'
+        );
+    }
 
     public function showdetials(TournamentJoin $join)
     {
@@ -1021,5 +1117,83 @@ class TournamentController extends Controller
         ]);
 
         return back()->with('success', '📤 Room details sent successfully to all approved teams!');
+    }
+
+
+
+
+    public function dummyJoin(Tournament $tournament)
+    {
+        abort_if(!app()->environment(['local', 'staging']), 403);
+
+        DB::beginTransaction();
+
+        try {
+            $mode = strtolower($tournament->mode); // solo | duo | squad
+
+            $teamSize = match ($mode) {
+                'duo' => 2,
+                'squad' => 4,
+                default => 1,
+            };
+
+            $totalSlots = $tournament->slots; // e.g. 100 players / 50 teams
+            $joinCount = 0;
+
+            while ($joinCount < $totalSlots) {
+
+                $joinCode = strtoupper(Str::random(10));
+
+                $join = TournamentJoin::create([
+                    'tournament_id' => $tournament->id,
+                    'organizer_id'  => $tournament->organizer_id,
+                    'user_id'       => null, // guest
+                    'join_code'     => $joinCode,
+
+                    'team_name' => $mode === 'solo'
+                        ? null
+                        : 'Team ' . ($joinCount + 1),
+
+                    'mode' => $mode,
+
+                    'captain_ign'     => 'Player_' . ($joinCount + 1),
+                    'captain_game_id' => 'GAME_' . rand(10000, 99999),
+
+                    'email' => 'dummy' . $joinCount . '@test.com',
+                    'phone' => '900000000' . rand(1, 9),
+
+                    'is_paid'        => false,
+                    'entry_fee'      => 0,
+                    'payment_status' => 'not_required',
+
+                    'status' => 'approved',
+                    'notes'  => 'Dummy auto join',
+                ]);
+
+                // Add members for duo/squad
+                if ($teamSize > 1) {
+                    for ($i = 1; $i < $teamSize; $i++) {
+                        TournamentJoinMember::create([
+                            'tournament_join_id' => $join->id,
+                            'ign' => 'Player_' . ($joinCount + 1) . '_' . $i,
+                            'game_id' => 'GAME_' . rand(10000, 99999),
+                        ]);
+                    }
+                }
+
+                $joinCount++;
+            }
+
+            $tournament->update([
+                'filled_slots' => $totalSlots
+            ]);
+
+            DB::commit();
+
+            return back()->with('success', 'Dummy players joined successfully!');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 }

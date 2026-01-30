@@ -11,23 +11,28 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('tournament_match_results', function (Blueprint $table) {
+       Schema::create('match_results', function (Blueprint $table) {
             $table->id();
 
             $table->foreignId('tournament_id')
                 ->constrained()
                 ->cascadeOnDelete();
 
-            $table->foreignId('tournament_join_id')
-                ->constrained('tournament_joins')
+            $table->foreignId('organizer_id')
+                ->constrained('users')
                 ->cascadeOnDelete();
 
-            $table->string('ign');
-            $table->integer('kills')->default(0);
-            $table->integer('rank')->nullable();
+            // State
+            $table->boolean('is_locked')->default(false);
+            $table->timestamp('published_at')->nullable();
 
-            $table->boolean('processed')->default(false);
+            // Optional notes
+            $table->text('notes')->nullable();
+
             $table->timestamps();
+
+            // Only ONE result per tournament
+            $table->unique('tournament_id');
         });
     }
 
@@ -36,6 +41,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('tournament_match_results');
+        Schema::dropIfExists('match_results');
     }
 };

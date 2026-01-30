@@ -104,4 +104,8 @@ class Tournament extends Model
     {
         return Carbon::now()->greaterThanOrEqualTo($this->start_time);
     }
+    public function matchResult()
+    {
+        return $this->hasOne(MatchResult::class);
+    }
 }

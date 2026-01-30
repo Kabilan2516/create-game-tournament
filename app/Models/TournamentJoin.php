@@ -51,4 +51,8 @@ class TournamentJoin extends Model
     {
         return $this->hasMany(TournamentJoinMessage::class);
     }
+    public function matchResultEntries()
+    {
+        return $this->hasMany(MatchResultEntry::class);
+    }
 }

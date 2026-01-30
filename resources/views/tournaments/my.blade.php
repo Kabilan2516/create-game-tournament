@@ -49,10 +49,20 @@
     <!-- 🔹 ADS SLOT (TOP BANNER) -->
     <x-ad-slot page="tournaments" position="header" />
 
+
     <!-- 🔹 TOURNAMENT LIST (CARD + TABLE HYBRID) -->
     <section class="px-8 py-10 grid md:grid-cols-2 gap-10">
 
         @forelse($tournaments as $tournament)
+            @php
+                $now = now();
+
+                $isRegistrationClosed =
+                    $tournament->registration_close_time &&
+                    $now->greaterThanOrEqualTo($tournament->registration_close_time);
+
+                $isMatchStarted = $tournament->start_time && $now->greaterThanOrEqualTo($tournament->start_time);
+            @endphp
             <!-- TOURNAMENT CARD -->
             <div class="bg-slate-900 p-8 rounded-3xl border border-slate-700 hover:shadow-2xl transition">
                 {{-- ⚠️ ROOM DETAILS WARNING --}}
@@ -82,18 +92,27 @@
 
                     <!-- STATUS BADGE -->
                     @php
-                        $statusColors = [
-                            'open' => 'bg-green-600',
-                            'full' => 'bg-yellow-500',
-                            'ongoing' => 'bg-blue-600',
-                            'completed' => 'bg-gray-600',
-                            'cancelled' => 'bg-red-600',
-                        ];
+                        $now = now();
+
+                        if ($tournament->start_time && $now->greaterThanOrEqualTo($tournament->start_time)) {
+                            $statusText = 'Match Started';
+                            $statusColor = 'bg-blue-600';
+                        } elseif (
+                            $tournament->registration_close_time &&
+                            $now->greaterThanOrEqualTo($tournament->registration_close_time)
+                        ) {
+                            $statusText = 'Registration Closed';
+                            $statusColor = 'bg-yellow-500';
+                        } else {
+                            $statusText = 'Open';
+                            $statusColor = 'bg-green-600';
+                        }
                     @endphp
 
-                    <span class="px-3 py-1 rounded-full text-sm {{ $statusColors[$tournament->status] ?? 'bg-slate-600' }}">
-                        {{ ucfirst($tournament->status) }}
+                    <span class="px-3 py-1 rounded-full text-sm {{ $statusColor }}">
+                        {{ $statusText }}
                     </span>
+
                 </div>
 
                 <!-- STATS GRID -->
@@ -139,68 +158,110 @@
 
                 <!-- ACTION BUTTONS -->
                 <div class="grid grid-cols-4 gap-4 text-sm font-semibold">
-                    <a href="{{ route('organizer.requests', $tournament->id) }}"
-                        class="text-center py-2 rounded bg-cyan-600 hover:bg-cyan-700">
-                        Manage
-                    </a>
 
-                    <a href="{{ route('tournaments.edit', $tournament) }}"
-                        class="text-center py-2 rounded bg-slate-700 hover:bg-slate-600">
-                        Edit
-                    </a>
+                    {{-- MANAGE JOINS (allowed until match starts) --}}
+                    @if (!$isMatchStarted)
+                        <a href="{{ route('organizer.requests', $tournament->id) }}"
+                            class="text-center py-2 rounded bg-cyan-600 hover:bg-cyan-700">
+                            Manage
+                        </a>
+                    @endif
 
+                    {{-- EDIT (blocked after match starts) --}}
+                    @if (!$isMatchStarted)
+                        <a href="{{ route('tournaments.edit', $tournament) }}"
+                            class="text-center py-2 rounded bg-slate-700 hover:bg-slate-600">
+                            Edit
+                        </a>
+                    @endif
+
+                    {{-- VIEW (always allowed) --}}
                     <a href="{{ route('tournaments.show', $tournament) }}"
                         class="text-center py-2 rounded bg-purple-600 hover:bg-purple-700">
                         View
                     </a>
 
-                    <form action="{{ route('tournaments.destroy', $tournament) }}" method="POST"
-                        onsubmit="return confirm('Delete this tournament?')">
-                        @csrf
-                        @method('DELETE')
-                        <button class="w-full py-2 rounded bg-red-600 hover:bg-red-700">
-                            Delete
-                        </button>
-                    </form>
+                    {{-- DELETE (blocked after match starts) --}}
+                    @if (!$isMatchStarted)
+                        <form action="{{ route('tournaments.destroy', $tournament) }}" method="POST"
+                            onsubmit="return confirm('Delete this tournament?')">
+                            @csrf
+                            @method('DELETE')
+                            <button class="w-full py-2 rounded bg-red-600 hover:bg-red-700">
+                                Delete
+                            </button>
+                        </form>
+                    @endif
+
                 </div>
+
 
                 <!-- EXTRA INFO -->
+                <!-- EXTRA INFO -->
                 <div class="mt-6 grid md:grid-cols-3 gap-4 text-sm text-gray-300">
-                    <p>👥 Approved Teams: {{ $tournament->approved_teams }}</p>
-                    <p>💰 Type: {{ $tournament->is_paid ? 'Paid' : 'Free' }}</p>
-                    @if ($tournament->room_released)
-                        <p class="text-green-400 font-semibold">📤 Room Sent</p>
-                    @elseif ($tournament->room_id && $tournament->room_password)
-                        <p class="text-yellow-400 font-semibold">🔐 Room Ready (Not Sent)</p>
-                    @else
-                        <p class="text-orange-400 font-semibold">🔐 Room Not Set</p>
-                    @endif
-                    <a href="{{ route('organizer.results.upload', $tournament) }}"
-                        class="text-center py-2 rounded bg-emerald-600 hover:bg-emerald-700">
-                        📊 Upload Results
-                    </a>
 
+                    <!-- Approved Teams -->
+                    <div class="bg-slate-800 p-4 rounded-xl text-center">
+                        <p class="text-sm text-gray-400">👥 Approved Teams</p>
+                        <p class="font-bold text-white">{{ $tournament->approved_teams }}</p>
+                    </div>
+
+                    <!-- Type -->
+                    <div class="bg-slate-800 p-4 rounded-xl text-center">
+                        <p class="text-sm text-gray-400">💰 Type</p>
+                        <p class="font-bold {{ $tournament->is_paid ? 'text-yellow-300' : 'text-green-400' }}">
+                            {{ $tournament->is_paid ? 'Paid' : 'Free' }}
+                        </p>
+                    </div>
+
+                    <!-- Room / Upload Results -->
+                    <div class="bg-slate-800 p-4 rounded-xl text-center">
+
+                        @if ($isMatchStarted)
+                            {{-- Upload Results takes this slot --}}
+                            <a href="{{ route('organizer.results.upload', $tournament) }}"
+                                class="block w-full py-3 rounded-xl font-bold
+                      bg-gradient-to-r from-emerald-500 to-green-600 hover:opacity-90">
+                                📊 Upload Results
+                            </a>
+                        @else
+                            {{-- Room status before match start --}}
+                            @if ($tournament->room_released)
+                                <p class="text-green-400 font-semibold">📤 Room Sent</p>
+                            @elseif ($tournament->room_id && $tournament->room_password)
+                                <p class="text-yellow-400 font-semibold">🔐 Room Ready</p>
+                                <p class="text-xs text-gray-400">(Not Sent)</p>
+                            @else
+                                <p class="text-orange-400 font-semibold">🔐 Room Not Set</p>
+                            @endif
+                        @endif
+
+                    </div>
 
                 </div>
+
                 {{-- 🔥 SEND ROOM DETAILS BUTTON --}}
-                @if ($tournament->room_id && $tournament->room_password && !$tournament->room_released)
+                @if (!$isMatchStarted && $tournament->room_id && $tournament->room_password && !$tournament->room_released)
                     <form action="{{ route('organizer.tournaments.sendRoom', $tournament) }}" method="POST"
                         onsubmit="return confirm('Send room details to ALL approved teams?')" class="mt-6">
-
                         @csrf
-
                         <button
-                            class="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 hover:opacity-90">
+                            class="w-full py-3 rounded-xl font-bold
+                   bg-gradient-to-r from-green-500 to-emerald-600 hover:opacity-90">
                             📤 Send Room Details to Approved Teams
                         </button>
                     </form>
                 @endif
 
+
             </div>
         @empty
-            <div class="col-span-2 text-center text-gray-400 py-20">
-                You have not created any tournaments yet.
-            </div>
+            @if (!$isMatchStarted && (!$tournament->room_id || !$tournament->room_password))
+                <div
+                    class="mb-4 px-4 py-2 rounded-xl bg-orange-500/20 border border-orange-500 text-orange-300 text-sm font-semibold">
+                    ⚠️ Room details not added yet
+                </div>
+            @endif
         @endforelse
 
 

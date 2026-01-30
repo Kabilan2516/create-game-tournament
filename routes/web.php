@@ -7,14 +7,15 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrganizerController;
+use App\Http\Controllers\PlayerRoomController;
 use App\Http\Controllers\TournamentController;
+use App\Http\Controllers\MatchResultController;
+use App\Http\Controllers\PlayerPaymentController;
+use App\Http\Controllers\PlayerProfileController;
 use App\Http\Controllers\OrganizerResultController;
 use App\Http\Controllers\PlayerDashboardController;
 use App\Http\Controllers\PlayerTournamentController;
-use App\Http\Controllers\PlayerRoomController;
 use App\Http\Controllers\PlayerNotificationController;
-use App\Http\Controllers\PlayerProfileController;
-use App\Http\Controllers\PlayerPaymentController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -53,9 +54,7 @@ Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 // 🔹 DASHBOARD (After Login)
 Route::middleware(['auth', 'role:organizer'])->group(function () {
 
-    Route::get('/dashboard', function () {
-        return view('dashboard'); // we will create this later
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 });
 
 Route::get('/verify-email', function () {
@@ -112,6 +111,10 @@ Route::middleware(['auth', 'role:organizer'])->group(function () {
     Route::get('/dashboard/join-requests', [TournamentController::class, 'joinRequests'])
 
         ->name('tournaments.requests');
+    Route::post(
+        '/organizer/tournaments/{tournament}/requests/bulk',
+        [TournamentController::class, 'bulkAction']
+    )->name('organizer.requests.bulk');
 
     Route::post('/organizer/requests/{join}/approve', [TournamentController::class, 'approve'])
         ->name('organizer.requests.approve');
@@ -152,6 +155,8 @@ Route::middleware(['auth', 'role:organizer'])->group(function () {
     Route::get('/dashboard/settings', [OrganizerController::class, 'settings'])
 
         ->name('organizer.settings');
+
+    Route::get('/tournaments/{tournament}/dummy-join', [TournamentController::class, 'dummyJoin']);
 });
 
 
@@ -218,6 +223,14 @@ Route::middleware(['auth', 'role:player,organizer'])
         Route::get('/wallet', function () {
             abort(403, 'Wallet feature coming soon');
         })->name('wallet');
+
+        /* =========================
+           Result
+        ========================== */
+        Route::post(
+            '/organizer/tournaments/{tournament}/results/save',
+            [MatchResultController::class, 'store']
+        )->name('organizer.results.store');
     });
 
 // 🔹 PLAYER JOIN TOURNAMENT
