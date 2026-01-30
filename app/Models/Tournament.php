@@ -108,4 +108,8 @@ class Tournament extends Model
     {
         return $this->hasOne(MatchResult::class);
     }
+       public function matchResults()
+    {
+        return $this->hasMany(MatchResult::class);
+    }
 }

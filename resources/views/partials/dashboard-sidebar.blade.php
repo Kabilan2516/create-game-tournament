@@ -16,6 +16,10 @@
             class="block px-4 py-3 rounded {{ request()->routeIs('tournaments.create') ? 'bg-slate-800 text-cyan-400' : 'hover:bg-slate-800' }}">
             ➕ Create Tournament
         </a>
+             <a href="{{ route('series.index') }}"
+            class="block px-4 py-3 rounded {{ request()->routeIs('tournaments.create') ? 'bg-slate-800 text-cyan-400' : 'hover:bg-slate-800' }}">
+            🌳 Tournament Series
+        </a>
 
         <a href="{{ route('tournaments.my') }}"
             class="block px-4 py-3 rounded {{ request()->routeIs('tournaments.my') ? 'bg-slate-800 text-cyan-400' : 'hover:bg-slate-800' }}">
@@ -41,15 +45,15 @@
             class="block px-4 py-3 rounded {{ request()->routeIs('organizer.settings') ? 'bg-slate-800 text-cyan-400' : 'hover:bg-slate-800' }}">
             ⚙️ Settings
         </a>
-            <div class="p-6 border-t border-slate-800">
-        <form method="POST" action="{{ route('logout') }}" id="logout-form">
-            @csrf
+        <div class="p-6 border-t border-slate-800">
+            <form method="POST" action="{{ route('logout') }}" id="logout-form">
+                @csrf
 
-            <button type="submit" class="w-full py-2 rounded bg-red-500 hover:bg-red-600 font-semibold transition">
-                🚪 Logout
-            </button>
-        </form>
-           </div>
+                <button type="submit" class="w-full py-2 rounded bg-red-500 hover:bg-red-600 font-semibold transition">
+                    🚪 Logout
+                </button>
+            </form>
+        </div>
     </nav>
 
 

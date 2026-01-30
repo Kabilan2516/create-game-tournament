@@ -17,6 +17,7 @@ use App\Http\Controllers\TournamentJoinController;
 use App\Http\Controllers\OrganizerResultController;
 use App\Http\Controllers\PlayerDashboardController;
 use App\Http\Controllers\PlayerTournamentController;
+use App\Http\Controllers\TournamentSeriesController;
 use App\Http\Controllers\PlayerNotificationController;
 /*
 |--------------------------------------------------------------------------
@@ -195,6 +196,31 @@ Route::middleware(['auth', 'role:organizer'])->group(function () {
         '/organizer/tournaments/{tournament}/joins/import-preview',
         [TournamentJoinController::class, 'importPreview']
     )->name('organizer.joins.importPreview');
+
+
+    Route::get('/series', [TournamentSeriesController::class, 'index'])
+        ->name('series.index');
+
+    Route::get('/series/create', [TournamentSeriesController::class, 'create'])
+        ->name('series.create');
+
+    Route::post('/series', [TournamentSeriesController::class, 'store'])
+        ->name('series.store');
+
+    Route::get('/series/{series}', [TournamentSeriesController::class, 'show'])
+        ->name('series.show');
+
+    Route::post('/series/{series}/tournaments', [TournamentSeriesController::class, 'attachTournaments'])
+        ->name('series.tournaments.attach');
+
+    Route::post('/series/{series}/points', [TournamentSeriesController::class, 'savePoints'])
+        ->name('series.points.save');
+
+    Route::post('/series/{series}/calculate', [TournamentSeriesController::class, 'calculateStandings'])
+        ->name('series.calculate');
+    // 🌳 TREE VIEW (NEW)
+    Route::get('/series/{series}/bracket', [TournamentSeriesController::class, 'bracket'])
+        ->name('series.bracket');
 });
 
 
