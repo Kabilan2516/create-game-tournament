@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Notifications\CustomVerifyEmail;
+
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -78,5 +80,10 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsToMany(Tournament::class, 'participants')
             ->withPivot('status')
             ->withTimestamps();
+    }
+
+    public function sendEmailVerificationNotification()
+    {
+        $this->notify(new CustomVerifyEmail());
     }
 }
