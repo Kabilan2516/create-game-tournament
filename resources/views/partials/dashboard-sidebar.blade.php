@@ -41,8 +41,8 @@
             👤 Organizer Profile
         </a>
 
-        <a href="{{ route('organizer.settings') }}"
-            class="block px-4 py-3 rounded {{ request()->routeIs('organizer.settings') ? 'bg-slate-800 text-cyan-400' : 'hover:bg-slate-800' }}">
+        <a href="{{ route('settings.index') }}"
+            class="block px-4 py-3 rounded {{ request()->routeIs('settings.index') ? 'bg-slate-800 text-cyan-400' : 'hover:bg-slate-800' }}">
             ⚙️ Settings
         </a>
         <div class="p-6 border-t border-slate-800">

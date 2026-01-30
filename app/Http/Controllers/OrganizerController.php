@@ -3,16 +3,49 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Organizer;
 use App\Models\Tournament;
 use Illuminate\Http\Request;
 use App\Models\TournamentJoin;
+use Illuminate\Support\Facades\Auth;
 
 class OrganizerController extends Controller
 {
     public function profile()
     {
-        return view('organizer.profile');
+        $user = Auth::user();
+
+        $organizer = Organizer::with('media')
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        // Media
+        $banner = optional(
+            $organizer->media->where('collection', 'banner')->last()
+        )->file_path;
+
+        $avatar = optional(
+            $organizer->media->where('collection', 'avatar')->last()
+        )->file_path;
+
+        return view('organizer.profile', [
+            'user' => $user,
+            'organizer' => $organizer,
+
+            // Media
+            'banner' => $banner,
+            'avatar' => $avatar,
+
+            // Stats
+            'tournamentsCount' => $organizer->tournaments()->count(),
+            'seriesCount' => $organizer->series()->count(),
+            'totalParticipants' => $organizer->tournaments()->sum('filled_slots'),
+        ]);
     }
+
+
+
+
     public function settings()
     {
         return view('organizer.settings');

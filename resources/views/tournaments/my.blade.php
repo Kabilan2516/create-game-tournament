@@ -265,12 +265,12 @@
 
             </div>
         @empty
-            @if (!$isMatchStarted && (!$tournament->room_id || !$tournament->room_password))
+       
                 <div
                     class="mb-4 px-4 py-2 rounded-xl bg-orange-500/20 border border-orange-500 text-orange-300 text-sm font-semibold">
-                    ⚠️ Room details not added yet
+                    ⚠️ NO rooms created
                 </div>
-            @endif
+        
         @endforelse
 
 

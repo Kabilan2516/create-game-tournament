@@ -19,6 +19,8 @@ use App\Http\Controllers\PlayerDashboardController;
 use App\Http\Controllers\PlayerTournamentController;
 use App\Http\Controllers\TournamentSeriesController;
 use App\Http\Controllers\PlayerNotificationController;
+use App\Http\Controllers\SettingsController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -168,10 +170,6 @@ Route::middleware(['auth', 'role:organizer'])->group(function () {
     // Organizer Profile Page
     Route::get('/dashboard/profile', [OrganizerController::class, 'profile'])
         ->name('organizer.profile');
-    // Organizer Settings Page
-    Route::get('/dashboard/settings', [OrganizerController::class, 'settings'])
-
-        ->name('organizer.settings');
 
     Route::get('/tournaments/{tournament}/dummy-join', [TournamentController::class, 'dummyJoin']);
 
@@ -222,6 +220,39 @@ Route::middleware(['auth', 'role:organizer'])->group(function () {
     Route::get('/series/{series}/bracket', [TournamentSeriesController::class, 'bracket'])
         ->name('series.bracket');
 });
+
+Route::middleware(['auth', 'role:organizer'])
+    ->prefix('dashboard/settings')
+    ->group(function () {
+
+        // Main settings page
+        Route::get('/', [SettingsController::class, 'index'])
+            ->name('settings.index');
+
+        // Profile
+        Route::post('/profile', [SettingsController::class, 'updateProfile'])
+            ->name('settings.profile.update');
+
+        // Security
+        Route::post('/security', [SettingsController::class, 'updateSecurity'])
+            ->name('settings.security.update');
+
+        // Notifications
+        Route::post('/notifications', [SettingsController::class, 'updateNotifications'])
+            ->name('settings.notifications.update');
+
+        // Privacy
+        Route::post('/privacy', [SettingsController::class, 'updatePrivacy'])
+            ->name('settings.privacy.update');
+
+        // Social links
+        Route::post('/social', [SettingsController::class, 'updateSocial'])
+            ->name('settings.social.update');
+
+        // Deactivate account
+        Route::post('/deactivate', [SettingsController::class, 'deactivate'])
+            ->name('settings.deactivate');
+    });
 
 
 
