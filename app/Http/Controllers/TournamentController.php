@@ -659,7 +659,7 @@ class TournamentController extends Controller
             $join = TournamentJoin::create([
                 'tournament_id' => $tournament->id,
                 'organizer_id'  => $tournament->organizer_id,
-                'user_id'       => Auth::id(),
+                'user_id'       => 'null',
 
                 'join_code' => $joinCode,
 

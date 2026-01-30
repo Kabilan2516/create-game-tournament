@@ -58,8 +58,7 @@
 
                     <!-- STATUS -->
                     <div class="mb-6 flex items-center gap-3">
-                        <span class="px-4 py-1 rounded-full text-sm font-semibold
-                            {{ $statusColors[$join->status] }}">
+                        <span class="px-4 py-1 rounded-full text-sm font-semibold {{ $statusColors[$join->status] }}">
                             {{ ucfirst($join->status) }}
                         </span>
 
@@ -87,6 +86,41 @@
                                        class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700">
                             </div>
                         @endif
+
+                        <!-- CONTACT INFO -->
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">
+                                    📧 Email
+                                    @if($join->mode === 'solo')
+                                        <span class="text-xs text-gray-500">(required)</span>
+                                    @else
+                                        <span class="text-xs text-gray-500">(team contact)</span>
+                                    @endif
+                                </label>
+                                <input type="email"
+                                       name="email"
+                                       value="{{ old('email', $join->email) }}"
+                                       {{ !$canEdit ? 'disabled' : '' }}
+                                       class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">
+                                    📞 Phone
+                                    @if($join->mode === 'solo')
+                                        <span class="text-xs text-gray-500">(required)</span>
+                                    @else
+                                        <span class="text-xs text-gray-500">(team contact)</span>
+                                    @endif
+                                </label>
+                                <input type="text"
+                                       name="phone"
+                                       value="{{ old('phone', $join->phone) }}"
+                                       {{ !$canEdit ? 'disabled' : '' }}
+                                       class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700">
+                            </div>
+                        </div>
 
                         <!-- PLAYERS -->
                         <div class="space-y-4">
@@ -149,10 +183,10 @@
                 <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800">
                     <h3 class="font-bold mb-4">ℹ️ Info</h3>
                     <ul class="text-sm text-gray-400 space-y-2">
-                        <li>• All players are equal</li>
+                        <li>• Email & phone are required for communication</li>
+                        <li>• One contact per team (duo / squad)</li>
                         <li>• You can add players until team is full</li>
                         <li>• Editing locks after match start</li>
-                        <li>• Join Code is unique</li>
                     </ul>
                 </div>
             </div>

@@ -89,6 +89,8 @@ class JoinCodeController extends Controller
 
         $request->validate([
             'team_name' => 'nullable|string|max:255',
+            'email' => 'required|email',
+            'phone' => 'required|string|max:20',
             'captain_ign' => 'required|string|max:100',
             'captain_game_id' => 'required|string|max:100',
             'members' => 'nullable|array',

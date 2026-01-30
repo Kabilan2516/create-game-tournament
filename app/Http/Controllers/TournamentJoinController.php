@@ -31,11 +31,14 @@ class TournamentJoinController extends Controller
     {
         abort_if($tournament->organizer_id !== Auth::id(), 403);
 
-        // 🔹 CLEAN EMPTY MEMBERS
+        /* =========================
+       CLEAN EMPTY MEMBERS
+    ========================= */
         $cleanTeams = [];
 
-        foreach ($request->teams as $team) {
-            $members = collect($team['members'])
+        foreach ($request->teams ?? [] as $team) {
+
+            $members = collect($team['members'] ?? [])
                 ->filter(
                     fn($m) =>
                     !empty($m['ign']) && !empty($m['game_id'])
@@ -43,8 +46,9 @@ class TournamentJoinController extends Controller
                 ->values()
                 ->toArray();
 
+            // skip fully empty team
             if (count($members) === 0) {
-                continue; // skip empty team
+                continue;
             }
 
             $team['members'] = $members;
@@ -53,67 +57,93 @@ class TournamentJoinController extends Controller
 
         $request->merge(['teams' => $cleanTeams]);
 
-        // 🔹 BASIC VALIDATION
+        /* =========================
+       VALIDATION
+    ========================= */
         $request->validate([
             'teams' => 'required|array|min:1',
+
+            // contact (ONE PER TEAM)
+            'teams.*.email' => 'required|email',
+            'teams.*.phone' => 'required|string|max:20',
+
+            // optional team name
+            'teams.*.team_name' => 'nullable|string|max:255',
+
+            // members
             'teams.*.members' => 'required|array|min:1',
             'teams.*.members.*.ign' => 'required|string|max:100',
             'teams.*.members.*.game_id' => 'required|string|max:100',
-            'teams.*.team_name' => 'nullable|string|max:255',
         ]);
 
-        // 🔹 MODE LIMITS
+        /* =========================
+       MODE RULES
+    ========================= */
         $limits = match ($tournament->mode) {
-            'solo' => ['min' => 1, 'max' => 1],
-            'duo' => ['min' => 1, 'max' => 2],
-            'squad' => ['min' => 1, 'max' => 4],
+            'solo'  => ['min' => 1, 'max' => 1],
+            'duo'   => ['min' => 1, 'max' => 2],   // 👈 allow 1 or 2
+            'squad' => ['min' => 1, 'max' => 4],   // 👈 allow 1–4
         };
 
-        // 🔹 SLOT CHECK
+        /* =========================
+       SLOT CHECK
+    ========================= */
         if ($tournament->filled_slots + count($request->teams) > $tournament->slots) {
             return back()->withErrors([
-                'error' => 'Not enough slots available.'
+                'error' => 'Not enough slots available.',
             ]);
         }
 
         DB::beginTransaction();
 
         try {
+
             foreach ($request->teams as $team) {
 
                 $memberCount = count($team['members']);
 
-                if ($memberCount < $limits['min'] || $memberCount > $limits['max']) {
+                if (
+                    $memberCount < $limits['min'] ||
+                    $memberCount > $limits['max']
+                ) {
                     throw new \Exception(
                         ucfirst($tournament->mode) .
                             " teams must have between {$limits['min']} and {$limits['max']} players."
                     );
                 }
 
-                // 🔹 CREATE JOIN
+                /* =========================
+               CREATE JOIN
+            ========================= */
                 $join = TournamentJoin::create([
                     'tournament_id' => $tournament->id,
                     'organizer_id'  => $tournament->organizer_id,
                     'user_id'       => null,
+
                     'join_code'     => strtoupper(Str::random(10)),
 
                     'team_name'     => $team['team_name'] ?? null,
                     'mode'          => $tournament->mode,
 
+                    // first player = primary
                     'captain_ign'     => $team['members'][0]['ign'],
                     'captain_game_id' => $team['members'][0]['game_id'],
 
-                    'email' => 'manual_' . Str::random(6) . '@gameconnect.local',
-                    'phone' => '0000000000',
+                    // CONTACT (IMPORTANT)
+                    'email' => $team['email'],
+                    'phone' => $team['phone'],
 
                     'is_paid'        => false,
                     'entry_fee'      => 0,
                     'payment_status' => 'not_required',
 
+                    // organizer-added = auto approved
                     'status' => 'approved',
                 ]);
 
-                // 🔹 SAVE EXTRA MEMBERS
+                /* =========================
+               SAVE EXTRA MEMBERS
+            ========================= */
                 foreach (array_slice($team['members'], 1) as $member) {
                     TournamentJoinMember::create([
                         'tournament_join_id' => $join->id,
@@ -122,7 +152,7 @@ class TournamentJoinController extends Controller
                     ]);
                 }
 
-                // 🔹 SLOT = ONE TEAM
+                // ONE TEAM = ONE SLOT
                 $tournament->increment('filled_slots', 1);
             }
 

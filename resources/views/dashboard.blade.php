@@ -34,7 +34,7 @@
 <section class="px-8 grid md:grid-cols-3 gap-10 pb-20">
 
     <!-- LEFT -->
-    <div class="md:col-span-2 space-y-10">
+    {{-- <div class="md:col-span-2 space-y-10">
 
         <!-- Tournaments -->
         <div class="bg-slate-900 p-8 rounded-3xl border border-slate-700">
@@ -67,7 +67,7 @@
         </div>
 
 
-    </div>
+    </div> --}}
 
 
 </section>
