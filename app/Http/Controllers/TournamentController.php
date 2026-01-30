@@ -136,9 +136,24 @@ class TournamentController extends Controller
 
 
     // Organizer create form
-    public function create()
+    public function create(string $game)
     {
-        return view('tournaments.create');
+        $allowedGames = ['CODM', 'PUBG'];
+
+        abort_unless(in_array(strtoupper($game), $allowedGames), 404);
+        if ($game === 'CODM') {
+            return view('tournaments.codm-create', [
+                'selectedGame' => strtoupper($game)
+            ]);
+        }
+        return view('tournaments.pubg-create', [
+            'selectedGame' => strtoupper($game)
+        ]);
+    }
+
+    public function selectGame()
+    {
+        return view('tournaments.select-game');
     }
 
 
@@ -447,10 +462,51 @@ class TournamentController extends Controller
 
 
     // Delete tournament
-    public function destroy($id)
+
+
+    public function destroy(Tournament $tournament)
     {
-        return redirect()->route('tournaments.index');
+        // 🔐 SECURITY: only owner
+        if ($tournament->organizer_id !== Auth::id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // ⛔ BLOCK DELETE AFTER MATCH START
+        if (now()->greaterThanOrEqualTo($tournament->start_time)) {
+            return back()->withErrors([
+                'error' => '❌ Tournament has already started. Deletion is not allowed.',
+            ]);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            /**
+             * Thanks to cascadeOnDelete in migrations,
+             * deleting tournament will automatically remove:
+             * - tournament_joins
+             * - tournament_join_members
+             * - participants
+             * - match results (current & future)
+             */
+
+            $tournament->delete();
+
+            DB::commit();
+
+            return redirect()
+                ->route('tournaments.my')
+                ->with('success', '🗑️ Tournament deleted successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->withErrors([
+                'error' => 'Something went wrong while deleting the tournament.',
+                'debug' => $e->getMessage(), // remove in production
+            ]);
+        }
     }
+
 
     // Join tournament
     public function join($id)
@@ -501,17 +557,24 @@ class TournamentController extends Controller
             'upiQr'
         ));
     }
-
+    public function manuvaljoinForm()
+    {
+        return view('tournaments.manual-join');
+    }
     public function joinStore(Request $request, Tournament $tournament)
     {
         // 🔹 CHECK TOURNAMENT STATUS
         if ($tournament->status !== 'open') {
-            return back()->withErrors(['error' => 'This tournament is not open for joining.']);
+            return back()->withErrors([
+                'error' => 'This tournament is not open for joining.'
+            ]);
         }
 
-        // 🔹 CHECK SLOT AVAILABILITY
+        // 🔹 CHECK SLOT AVAILABILITY (TEAM-BASED)
         if ($tournament->filled_slots >= $tournament->slots) {
-            return back()->withErrors(['error' => 'This tournament is already full.']);
+            return back()->withErrors([
+                'error' => 'This tournament is already full.'
+            ]);
         }
 
         // 🔹 PREVENT DUPLICATE JOIN (same email)
@@ -525,16 +588,12 @@ class TournamentController extends Controller
             ]);
         }
 
-        // 🔹 GENERATE JOIN CODE (FOR GUEST TRACKING)
-        $joinCode = strtoupper(Str::random(10));
-
-        // 🔹 VALIDATION (ONLY PLAYER INPUT)
+        // 🔹 BASIC VALIDATION
         $request->validate([
-
             'team_name' => 'nullable|string|max:255',
 
+            'captain_ign'     => 'required|string|max:100',
             'captain_game_id' => 'required|string|max:100',
-            'captain_ign' => 'required|string|max:100',
 
             'email' => 'required|email',
             'phone' => 'required|string|max:20',
@@ -545,83 +604,92 @@ class TournamentController extends Controller
             'members.*.ign' => 'nullable|string|max:100',
             'members.*.game_id' => 'nullable|string|max:100',
 
-            // Payment proof ONLY if tournament is paid
             'payment_proof' => $tournament->is_paid
                 ? 'required|image|max:2048'
                 : 'nullable',
         ]);
 
+        // 🔹 MODE LIMITS
+        $limits = match (strtolower($tournament->mode)) {
+            'solo'  => ['min' => 1, 'max' => 1],
+            'duo'   => ['min' => 1, 'max' => 2],
+            'squad' => ['min' => 1, 'max' => 4],
+        };
+
+        // 🔹 NORMALIZE MEMBERS
+        $members = collect($request->members ?? [])
+            ->filter(
+                fn($m) =>
+                !empty($m['ign']) && !empty($m['game_id'])
+            )
+            ->values()
+            ->toArray();
+
+        // 🔹 TOTAL MEMBER COUNT = CAPTAIN + MEMBERS
+        $totalMembers = 1 + count($members);
+
+        if ($totalMembers < $limits['min'] || $totalMembers > $limits['max']) {
+            return back()->withErrors([
+                'error' =>
+                ucfirst($tournament->mode) .
+                    " teams must have between {$limits['min']} and {$limits['max']} players."
+            ]);
+        }
+
         DB::beginTransaction();
 
         try {
 
-            // 🔹 READ ALL RULES FROM TOURNAMENT (SOURCE OF TRUTH)
-            $isPaidTournament = $tournament->is_paid == 1;
-            $mode = strtolower($tournament->mode);   // SOLO / DUO / SQUAD from DB
+            $joinCode = strtoupper(Str::random(10));
+
+            // 🔹 PAYMENT LOGIC
+            $isPaidTournament = (bool) $tournament->is_paid;
             $entryFee = $isPaidTournament ? $tournament->entry_fee : 0;
 
             $isAutoApproved =
                 $tournament->auto_approve &&
                 (
-                    !$tournament->is_paid ||
-                    ($tournament->is_paid && $request->hasFile('payment_proof'))
+                    !$isPaidTournament ||
+                    ($isPaidTournament && $request->hasFile('payment_proof'))
                 );
-
 
             $finalStatus = $isAutoApproved ? 'approved' : 'pending';
 
-            // 🔹 CREATE JOIN RECORD
+            // 🔹 CREATE JOIN
             $join = TournamentJoin::create([
-
                 'tournament_id' => $tournament->id,
                 'organizer_id'  => $tournament->organizer_id,
-
-                // guest supported
-                'user_id' => Auth::id(),   // null if not logged in
+                'user_id'       => Auth::id(),
 
                 'join_code' => $joinCode,
 
-                // TEAM / PLAYER INFO
                 'team_name' => $request->team_name,
-                'mode'      => $mode,   // 🔥 FROM TOURNAMENT, NOT FROM USER
+                'mode'      => strtolower($tournament->mode),
 
                 'captain_ign'     => $request->captain_ign,
                 'captain_game_id' => $request->captain_game_id,
 
-                // CONTACT
                 'email' => $request->email,
                 'phone' => $request->phone,
 
-                // PAYMENT INFO (FROM TOURNAMENT)
                 'is_paid'        => $isPaidTournament,
                 'entry_fee'      => $entryFee,
                 'payment_status' => $isPaidTournament ? 'pending' : 'not_required',
 
-                // STATUS
                 'status' => $finalStatus,
                 'notes'  => $request->notes,
             ]);
 
-            // 🔹 SAVE TEAM MEMBERS (ONLY IF DUO / SQUAD)
-            if (in_array($mode, ['duo', 'squad']) && is_array($request->members)) {
-                foreach ($request->members as $member) {
-                    if (
-                        empty($member['ign']) ||
-                        empty($member['game_id'])
-                    ) {
-                        continue;
-                    }
-
-                    TournamentJoinMember::create([
-                        'tournament_join_id' => $join->id,
-                        'ign' => $member['ign'],
-                        'game_id' => $member['game_id'],
-                    ]);
-                }
+            // 🔹 SAVE EXTRA MEMBERS
+            foreach ($members as $member) {
+                TournamentJoinMember::create([
+                    'tournament_join_id' => $join->id,
+                    'ign' => $member['ign'],
+                    'game_id' => $member['game_id'],
+                ]);
             }
 
-
-            // 🔹 SAVE PAYMENT PROOF (IF PAID TOURNAMENT)
+            // 🔹 PAYMENT PROOF
             if ($isPaidTournament && $request->hasFile('payment_proof')) {
                 MediaUploadService::upload(
                     $request->file('payment_proof'),
@@ -631,26 +699,18 @@ class TournamentController extends Controller
                 );
             }
 
-            if ($finalStatus === 'approved') {
-                // 🔹 CREATE CHAT MESSAGE (FOR PWA)
-                $message = "✅ Your team has been APPROVED for the tournament:\n\n"
-                    . "🏆 Tournament: {$tournament->title}\n"
-                    . "🎮 Mode: " . ucfirst($join->mode) . "\n"
-                    . "🆔 Join ID: {$join->join_code}\n\n"
-                    . "Room details will be shared soon.\n"
-                    . "Please be ready before match time.";
-            } else {
-                // 🔹 🔥 CREATE FIRST SYSTEM MESSAGE (FOR PWA CHAT)
-                $message =
-                    "✅ Your application has been submitted successfully!\n\n" .
-                    "🏆 Tournament: {$tournament->title}\n" .
-                    "🎮 Mode: " . ucfirst($mode) . "\n" .
-                    "🆔 Join Code: {$joinCode}\n\n" .
-                    "⏳ Status: Pending approval by organizer.\n" .
-                    "You will receive updates here once reviewed.\n\n" .
-                    "Please keep this Join Code safe.";
-            }
-
+            // 🔹 SYSTEM MESSAGE
+            $message = $finalStatus === 'approved'
+                ? "✅ Your team has been APPROVED for the tournament:\n\n"
+                . "🏆 Tournament: {$tournament->title}\n"
+                . "🎮 Mode: " . ucfirst($join->mode) . "\n"
+                . "🆔 Join ID: {$join->join_code}\n\n"
+                . "Room details will be shared soon."
+                : "✅ Your application has been submitted successfully!\n\n"
+                . "🏆 Tournament: {$tournament->title}\n"
+                . "🎮 Mode: " . ucfirst($join->mode) . "\n"
+                . "🆔 Join Code: {$joinCode}\n\n"
+                . "⏳ Status: Pending approval.";
 
             TournamentJoinMessage::create([
                 'tournament_join_id' => $join->id,
@@ -658,28 +718,28 @@ class TournamentController extends Controller
                 'message' => $message,
                 'is_read' => false,
             ]);
+
             if ($finalStatus === 'approved') {
                 $tournament->increment('filled_slots');
             }
 
             DB::commit();
 
-            // 🔹 SUCCESS REDIRECT
             return redirect()
                 ->route('tournaments.show', $tournament->id)
-                ->with('success', 'You have successfully joined! 🎉 Your Join Code: ' . $joinCode . '. Please save this to track your status.')
-                ->with('show_pwa_prompt', true)
+                ->with('success', 'You have successfully joined! 🎉')
                 ->with('join_code', $joinCode);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
 
             DB::rollBack();
 
             return back()->withErrors([
-                'error' => 'Something went wrong while joining. Please try again.',
-                'debug' => $e->getMessage(),   // remove in production
+                'error' => 'Something went wrong while joining.',
+                'debug' => $e->getMessage(), // remove in prod
             ]);
         }
     }
+
 
     // Organizer - My Tournaments
     public function myTournaments()

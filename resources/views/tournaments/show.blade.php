@@ -49,7 +49,9 @@
                     <div class="bg-black/40 p-4 rounded-xl text-center">
                         <p class="text-sm text-gray-400">Prize Pool</p>
                         <p class="text-xl font-bold text-yellow-300">
-                            ₹{{ number_format($tournament->prize_pool) }}
+                            ₹{{ number_format(
+                                ($tournament->first_prize ?? 0) + ($tournament->second_prize ?? 0) + ($tournament->third_prize ?? 0),
+                            ) }}
                         </p>
                     </div>
 

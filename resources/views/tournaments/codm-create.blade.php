@@ -24,7 +24,12 @@
             <!-- 🔹 TOURNAMENT BANNER UPLOAD (PREMIUM STYLE) -->
             <x-banner-upload name="banner" label="Tournament Banner / Poster" hint="(1200×600 recommended)" />
 
-            <input type="hidden" name="game" value="CODM">
+            <div class="mb-6">
+                <label class="block text-sm text-gray-400 mb-1">Game</label>
+                <input type="text" name="game" value="{{ $selectedGame }}" readonly
+                    class="w-full bg-slate-800 border border-slate-700 rounded px-4 py-3">
+            </div>
+
 
             <!-- BASIC DETAILS -->
             <div class="bg-slate-900 p-8 rounded-3xl border border-slate-700">
@@ -79,59 +84,134 @@
 
 
 
-            <!-- 🔹 SLOTS & TIMING -->
-            <div class="bg-slate-900 p-8 rounded-3xl border border-slate-700">
-                <h2 class="text-2xl font-bold mb-6">⏰ Slots & Schedule</h2>
+       <!-- 🔹 SLOTS & TIMING -->
+<div class="bg-slate-900 p-8 rounded-3xl border border-slate-700">
+    <h2 class="text-2xl font-bold mb-8">⏰ Slots & Schedule</h2>
 
-                <div class="grid md:grid-cols-2 gap-6">
+    <div class="grid md:grid-cols-2 gap-8">
 
-                    <!-- TOTAL TEAMS / SLOTS -->
-                    <div>
-                        <label class="block text-sm text-gray-400 mb-2">
-                            Total Teams / Slots *
-                        </label>
+        <!-- LEFT COLUMN -->
+        <div class="space-y-8">
 
-                        <input type="number" name="slots" x-model="slots" min="2" step="1"
-                            class="px-4 py-3 rounded bg-slate-800 border border-slate-700 w-full">
+            <!-- TOTAL TEAMS / SLOTS -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-200 mb-2">
+                    👥 Total Teams / Slots *
+                </label>
 
-                        <!-- Helper text -->
-                        <p class="text-xs text-gray-400 mt-1">
-                            Recommended for
-                            <span class="font-semibold text-white" x-text="mode.toUpperCase()"></span> :
-                            <span class="text-cyan-400 font-semibold" x-text="recommendedSlots"></span> teams
-                        </p>
-                    </div>
+                <input type="number"
+                       name="slots"
+                       x-model="slots"
+                       min="2"
+                       step="1"
+                       class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 w-full">
 
-                    <!-- MATCH START TIME -->
-                    <div>
-                        <label class="block text-sm text-gray-400 mb-2">Match Start Time *</label>
-                        <input type="datetime-local" name="start_time" x-model="startTime"
-                            class="px-4 py-3 rounded bg-slate-800 border border-slate-700 w-full">
-                    </div>
+                <p class="text-xs text-gray-400 mt-2">
+                    Recommended for
+                    <span class="font-semibold text-white" x-text="mode.toUpperCase()"></span> :
+                    <span class="text-cyan-400 font-semibold" x-text="recommendedSlots"></span> teams
+                </p>
+            </div>
 
-                    <!-- REGISTRATION CLOSE TIME -->
-                    <div>
-                        <label class="block text-sm text-gray-400 mb-2">Registration Closes At *</label>
-                        <input type="datetime-local" name="registration_close_time" x-model="registrationClose"
-                            class="px-4 py-3 rounded bg-slate-800 border border-slate-700 w-full">
+            <!-- REGION -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-200 mb-2">
+                    🌍 Region *
+                </label>
 
-                        <p class="text-xs text-gray-400 mt-1">
-                            Players cannot join after this time
-                        </p>
-                    </div>
+                <select name="region"
+                        class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 w-full">
+                    <option value="India">India</option>
+                    <option value="Asia">Asia</option>
+                    <option value="Global">Global</option>
+                </select>
+            </div>
 
-                    <!-- REGION -->
-                    <div>
-                        <label class="block text-sm text-gray-400 mb-2">Region *</label>
-                        <select name="region" class="px-4 py-3 rounded bg-slate-800 border border-slate-700 w-full">
-                            <option value="India">India</option>
-                            <option value="Asia">Asia</option>
-                            <option value="Global">Global</option>
-                        </select>
-                    </div>
+        </div>
 
+        <!-- RIGHT COLUMN -->
+        <div x-data="tournamentTimePicker()" x-init="init()" class="space-y-10">
+
+            <!-- MATCH START TIME -->
+            <div class="space-y-4">
+                <label class="block text-sm font-semibold text-gray-200">
+                    🕒 Match Start Time *
+                </label>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="date"
+                           name="start_date"
+                           x-model="startDate"
+                           :min="today"
+                           class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white
+                                  [color-scheme:dark] w-full">
+
+                    <input type="time"
+                           name="start_time_only"
+                           x-model="startTimeOnly"
+                           class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white
+                                  [color-scheme:dark] w-full">
+                </div>
+
+                <!-- SMART PRESETS -->
+                <div class="flex flex-wrap gap-2 text-xs pt-1">
+                    <button type="button" @click="setStartIn(30)"
+                        class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
+                        +30 min
+                    </button>
+                    <button type="button" @click="setStartIn(60)"
+                        class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
+                        +1 hour
+                    </button>
+                    <button type="button" @click="setStartTonight()"
+                        class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
+                        Tonight 9 PM
+                    </button>
                 </div>
             </div>
+
+            <!-- REGISTRATION CLOSE TIME -->
+            <div class="space-y-4 pt-6 border-t border-slate-700">
+                <label class="block text-sm font-semibold text-gray-200">
+                    ⛔ Registration Closes *
+                </label>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="date"
+                           name="registration_close_date"
+                           x-model="registrationDate"
+                           :min="today"
+                           :max="startDate"
+                           class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white
+                                  [color-scheme:dark] w-full">
+
+                    <input type="time"
+                           name="registration_close_time_only"
+                           x-model="registrationTimeOnly"
+                           class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white
+                                  [color-scheme:dark] w-full">
+                </div>
+
+                <p class="text-xs text-gray-400">
+                    Must be before match start time
+                </p>
+
+                <!-- SMART PRESETS -->
+                <div class="flex flex-wrap gap-2 text-xs">
+                    <button type="button" @click="setCloseBefore(30)"
+                        class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
+                        30 min before
+                    </button>
+                    <button type="button" @click="setCloseBefore(60)"
+                        class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
+                        1 hour before
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
 
 
             <!-- 🎁 TOURNAMENT REWARD & ENTRY -->
@@ -421,6 +501,66 @@
             }
         }
     </script>
+    <script>
+        function tournamentTimePicker() {
+            const now = new Date();
+
+            const pad = v => String(v).padStart(2, '0');
+
+            return {
+                today: now.toISOString().slice(0, 10),
+
+                startDate: '',
+                startTimeOnly: '',
+
+                registrationDate: '',
+                registrationTimeOnly: '',
+
+                init() {
+                    // default: match starts in 2 hours
+                    const start = new Date();
+                    start.setHours(start.getHours() + 2);
+
+                    this.startDate = start.toISOString().slice(0, 10);
+                    this.startTimeOnly = pad(start.getHours()) + ':' + pad(start.getMinutes());
+
+                    // registration closes 30 mins before
+                    this.setCloseBefore(30);
+                },
+
+                setStartIn(minutes) {
+                    const d = new Date();
+                    d.setMinutes(d.getMinutes() + minutes);
+
+                    this.startDate = d.toISOString().slice(0, 10);
+                    this.startTimeOnly = pad(d.getHours()) + ':' + pad(d.getMinutes());
+
+                    this.setCloseBefore(30);
+                },
+
+                setStartTonight() {
+                    const d = new Date();
+                    d.setHours(21, 0, 0);
+
+                    this.startDate = d.toISOString().slice(0, 10);
+                    this.startTimeOnly = '21:00';
+
+                    this.setCloseBefore(30);
+                },
+
+                setCloseBefore(minutes) {
+                    if (!this.startDate || !this.startTimeOnly) return;
+
+                    const start = new Date(`${this.startDate}T${this.startTimeOnly}`);
+                    start.setMinutes(start.getMinutes() - minutes);
+
+                    this.registrationDate = start.toISOString().slice(0, 10);
+                    this.registrationTimeOnly = pad(start.getHours()) + ':' + pad(start.getMinutes());
+                }
+            }
+        }
+    </script>
+
 
 
 @endsection

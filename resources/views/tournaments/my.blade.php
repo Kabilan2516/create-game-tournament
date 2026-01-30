@@ -127,7 +127,9 @@
                     <div class="bg-slate-800 p-4 rounded-xl text-center">
                         <p class="text-sm text-gray-400">Prize Pool</p>
                         <p class="font-bold text-yellow-300">
-                            ₹{{ number_format($tournament->prize_pool) }}
+                            ₹{{ number_format(
+                                ($tournament->first_prize ?? 0) + ($tournament->second_prize ?? 0) + ($tournament->third_prize ?? 0),
+                            ) }}
                         </p>
                     </div>
 
@@ -180,16 +182,23 @@
                         class="text-center py-2 rounded bg-purple-600 hover:bg-purple-700">
                         View
                     </a>
+                    {{--  Manuval organizer join --}}
+                    <a href="{{ route('organizer.joins.create', $tournament) }}"
+                        class="block text-center py-2 rounded bg-indigo-600 hover:bg-indigo-700 font-semibold">
+                        ➕ Add Participants
+                    </a>
 
                     {{-- DELETE (blocked after match starts) --}}
                     @if (!$isMatchStarted)
-                        <form action="{{ route('tournaments.destroy', $tournament) }}" method="POST"
-                            onsubmit="return confirm('Delete this tournament?')">
+                        <button type="button" onclick="openDeleteModal({{ $tournament->id }})"
+                            class="w-full py-2 rounded bg-red-600 hover:bg-red-700 font-semibold">
+                            🗑️ Delete
+                        </button>
+
+                        <form id="delete-form-{{ $tournament->id }}"
+                            action="{{ route('tournaments.destroy', $tournament) }}" method="POST" class="hidden">
                             @csrf
                             @method('DELETE')
-                            <button class="w-full py-2 rounded bg-red-600 hover:bg-red-700">
-                                Delete
-                            </button>
                         </form>
                     @endif
 
@@ -266,6 +275,52 @@
 
 
     </section>
+    <!-- DELETE CONFIRM MODAL -->
+    <div id="deleteModal" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50">
+
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-700 w-full max-w-md">
+
+            <h2 class="text-2xl font-bold text-red-400 mb-4">
+                ⚠️ Delete Tournament
+            </h2>
+
+            <p class="text-gray-300 mb-6">
+                This action <span class="text-red-400 font-semibold">cannot be undone</span>.
+                All joins, results, and data will be permanently removed.
+            </p>
+
+            <div class="flex justify-end gap-4">
+                <button onclick="closeDeleteModal()" class="px-5 py-2 rounded bg-slate-700 hover:bg-slate-600">
+                    Cancel
+                </button>
+
+                <button onclick="confirmDelete()" class="px-5 py-2 rounded bg-red-600 hover:bg-red-700 font-bold">
+                    Yes, Delete
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let deleteTournamentId = null;
+
+        function openDeleteModal(id) {
+            deleteTournamentId = id;
+            document.getElementById('deleteModal').classList.remove('hidden');
+            document.getElementById('deleteModal').classList.add('flex');
+        }
+
+        function closeDeleteModal() {
+            deleteTournamentId = null;
+            document.getElementById('deleteModal').classList.add('hidden');
+            document.getElementById('deleteModal').classList.remove('flex');
+        }
+
+        function confirmDelete() {
+            if (!deleteTournamentId) return;
+
+            document.getElementById(`delete-form-${deleteTournamentId}`).submit();
+        }
+    </script>
 
 
     <!-- 🔹 ADS SLOT (TOP BANNER) -->

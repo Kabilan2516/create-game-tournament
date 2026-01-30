@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\JoinCodeController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrganizerController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\TournamentController;
 use App\Http\Controllers\MatchResultController;
 use App\Http\Controllers\PlayerPaymentController;
 use App\Http\Controllers\PlayerProfileController;
+use App\Http\Controllers\TournamentJoinController;
 use App\Http\Controllers\OrganizerResultController;
 use App\Http\Controllers\PlayerDashboardController;
 use App\Http\Controllers\PlayerTournamentController;
@@ -51,6 +53,21 @@ Route::get('/verify-email', function () {
 
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 
+// Join code lookup
+Route::get('/join-code', [JoinCodeController::class, 'index'])
+    ->name('join.code.index');
+
+Route::post('/join-code/lookup', [JoinCodeController::class, 'lookup'])
+    ->name('join.code.lookup');
+
+// Update team via join code
+Route::post('/join-code/{join}/update', [JoinCodeController::class, 'update'])
+    ->name('join.code.update');
+// Show join code details (VIEW / EDIT page)
+Route::get('/join-code/{join}', [JoinCodeController::class, 'show'])
+    ->name('join.code.show');
+
+
 // 🔹 DASHBOARD (After Login)
 Route::middleware(['auth', 'role:organizer'])->group(function () {
 
@@ -86,9 +103,13 @@ Route::get('/organizers/{user}', [OrganizerController::class, 'publicProfile'])
 
 // 🔹 ORGANIZER ROUTES (ONLY LOGGED IN + ORGANIZER ROLE)
 Route::middleware(['auth', 'role:organizer'])->group(function () {
-    // Create Tournament
-    Route::get('/dashboard/tournaments/create', [TournamentController::class, 'create'])
+
+    Route::get('/dashboard/tournaments/create', [TournamentController::class, 'selectGame'])
         ->name('tournaments.create');
+
+    Route::get('/dashboard/tournaments/create/{game}', [TournamentController::class, 'create'])
+        ->name('tournaments.create.form');
+
 
     Route::post('/organizer/tournaments', [TournamentController::class, 'store'])
         ->name('organizer.tournaments.store');
@@ -124,13 +145,8 @@ Route::middleware(['auth', 'role:organizer'])->group(function () {
     Route::get('/organizer/joins/{join}', [TournamentController::class, 'showdetials'])
         ->name('organizer.joins.showdetials');
 
-    Route::get('/organizer/tournaments/{tournament}/requests', [TournamentController::class, 'requests'])
-        ->name('organizer.requests');
-    Route::get(
-        '/organizer/tournaments/{tournament}/release-room',
-        [TournamentController::class, 'releaseRoom']
-    )
-        ->name('tournaments.release-room');
+    Route::get('/organizer/tournaments/{tournament}/requests', [TournamentController::class, 'requests'])->name('organizer.requests');
+    Route::get('/organizer/tournaments/{tournament}/release-room', [TournamentController::class, 'releaseRoom'])->name('tournaments.release-room');
     Route::post(
         '/organizer/tournaments/{tournament}/send-room',
         [TournamentController::class, 'sendRoomDetails']
@@ -157,6 +173,28 @@ Route::middleware(['auth', 'role:organizer'])->group(function () {
         ->name('organizer.settings');
 
     Route::get('/tournaments/{tournament}/dummy-join', [TournamentController::class, 'dummyJoin']);
+
+    // 🔹 Show manual add participants page
+    Route::get(
+        '/tournaments/{tournament}/joins/create',
+        [TournamentJoinController::class, 'create']
+    )
+        ->name('organizer.joins.create');
+
+    // 🔹 Store manual participants (single + bulk)
+    Route::post(
+        '/tournaments/{tournament}/joins',
+        [TournamentJoinController::class, 'store']
+    )
+        ->name('organizer.joins.store');
+    Route::get(
+        '/organizer/tournaments/{tournament}/joins/template',
+        [TournamentJoinController::class, 'downloadTemplate']
+    )->name('organizer.joins.template');
+    Route::post(
+        '/organizer/tournaments/{tournament}/joins/import-preview',
+        [TournamentJoinController::class, 'importPreview']
+    )->name('organizer.joins.importPreview');
 });
 
 
