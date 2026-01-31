@@ -1,5 +1,5 @@
 @if(session('show_pwa_prompt'))
-<div id="pwa-install-banner"
+{{-- <div id="pwa-install-banner"
      class="fixed bottom-4 left-4 right-4 z-50">
 
     <div class="bg-slate-900 border border-cyan-500 rounded-2xl p-4
@@ -33,5 +33,5 @@ function hidePwaPrompt() {
     const el = document.getElementById('pwa-install-banner');
     if (el) el.remove();
 }
-</script>
+</script> --}}
 @endif
