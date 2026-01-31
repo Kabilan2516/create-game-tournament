@@ -174,9 +174,12 @@ class TournamentController extends Controller
             'map' => 'required|string',
 
             'slots' => 'required|integer|min:2',
+            'start_date' => 'required|date',
+            'start_time_only' => 'required|date_format:H:i',
 
-            'start_time' => 'required|date',
-            'registration_close_time' => 'required|date',
+            'registration_close_date' => 'required|date',
+            'registration_close_time_only' => 'required|date_format:H:i',
+
 
             'region' => 'required|string',
 
@@ -210,10 +213,10 @@ class TournamentController extends Controller
         $rewardType = $request->reward_type;
 
         /*
-    |--------------------------------------------------------------------------
-    | 🔐 ENTRY PAYMENT RULES
-    |--------------------------------------------------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | 🔐 ENTRY PAYMENT RULES
+        |--------------------------------------------------------------------------
+        */
         if ($isPaid) {
             if (!$request->upi_id) {
                 return back()->withErrors([
@@ -230,10 +233,10 @@ class TournamentController extends Controller
         }
 
         /*
-    |--------------------------------------------------------------------------
-    | 🎁 REWARD RULES
-    |--------------------------------------------------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | 🎁 REWARD RULES
+        |--------------------------------------------------------------------------
+        */
         if ($rewardType === 'free' || $rewardType === 'platform_points') {
             // No cash prize required
             $request->merge([
@@ -244,28 +247,47 @@ class TournamentController extends Controller
         }
 
         /*
-    |--------------------------------------------------------------------------
-    | ⏰ DATETIME HANDLING
-    |--------------------------------------------------------------------------
-    */
-        $startTime = Carbon::parse($request->start_time);
-        $registrationClose = Carbon::parse($request->registration_close_time);
+        |--------------------------------------------------------------------------
+        | ⏰ DATETIME HANDLING (FIXED – NO DB CHANGE)
+        |--------------------------------------------------------------------------
+        */
+        $startTime = Carbon::createFromFormat(
+            'Y-m-d H:i',
+            $request->start_date . ' ' . $request->start_time_only
+        );
+
+        $registrationClose = Carbon::createFromFormat(
+            'Y-m-d H:i',
+            $request->registration_close_date . ' ' . $request->registration_close_time_only
+        );
 
         /*
-    |--------------------------------------------------------------------------
-    | 🔐 ROOM PASSWORD
-    |--------------------------------------------------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | ⛔ SAFETY CHECK (OPTIONAL BUT RECOMMENDED)
+        |--------------------------------------------------------------------------
+        */
+        if ($registrationClose->greaterThanOrEqualTo($startTime)) {
+            return back()->withErrors([
+                'registration_close_date' => 'Registration must close before tournament start time.',
+            ]);
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | 🔐 ROOM PASSWORD
+        |--------------------------------------------------------------------------
+        */
         $roomPassword = null;
         if ($request->room_password) {
             $roomPassword = Crypt::encryptString($request->room_password);
         }
 
         /*
-    |--------------------------------------------------------------------------
-    | 🏆 CREATE TOURNAMENT
-    |--------------------------------------------------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | 🏆 CREATE TOURNAMENT
+        |--------------------------------------------------------------------------
+        */
         $tournament = Tournament::create([
 
             // Organizer
@@ -319,10 +341,10 @@ class TournamentController extends Controller
         ]);
 
         /*
-    |--------------------------------------------------------------------------
-    | 📷 FILE UPLOADS
-    |--------------------------------------------------------------------------
-    */
+        |--------------------------------------------------------------------------
+        | 📷 FILE UPLOADS
+        |--------------------------------------------------------------------------
+        */
         if ($request->hasFile('upi_qr')) {
             $path = $request->file('upi_qr')->store('upi_qr', 'public');
             $tournament->update(['upi_qr' => $path]);
@@ -659,7 +681,7 @@ class TournamentController extends Controller
             $join = TournamentJoin::create([
                 'tournament_id' => $tournament->id,
                 'organizer_id'  => $tournament->organizer_id,
-                'user_id'       => 'null',
+                'user_id'       => null,
 
                 'join_code' => $joinCode,
 

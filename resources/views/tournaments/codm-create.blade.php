@@ -22,7 +22,8 @@
             @csrf
 
             <!-- 🔹 TOURNAMENT BANNER UPLOAD (PREMIUM STYLE) -->
-            <x-banner-upload name="banner" label="Tournament Banner / Poster" hint="(1200×600 recommended)" />
+            <x-banner-upload name="banner" label="Tournament Banner / Poster" />
+
 
             <div class="mb-6">
                 <label class="block text-sm text-gray-400 mb-1">Game</label>
@@ -84,134 +85,119 @@
 
 
 
-       <!-- 🔹 SLOTS & TIMING -->
-<div class="bg-slate-900 p-8 rounded-3xl border border-slate-700">
-    <h2 class="text-2xl font-bold mb-8">⏰ Slots & Schedule</h2>
+            <!-- 🔹 SLOTS & TIMING -->
+            <div class="bg-slate-900 p-8 rounded-3xl border border-slate-700">
+                <h2 class="text-2xl font-bold mb-8">⏰ Slots & Schedule</h2>
 
-    <div class="grid md:grid-cols-2 gap-8">
+                <div class="grid md:grid-cols-2 gap-8">
 
-        <!-- LEFT COLUMN -->
-        <div class="space-y-8">
+                    <!-- LEFT COLUMN -->
+                    <div class="space-y-8">
 
-            <!-- TOTAL TEAMS / SLOTS -->
-            <div>
-                <label class="block text-sm font-semibold text-gray-200 mb-2">
-                    👥 Total Teams / Slots *
-                </label>
+                        <!-- TOTAL TEAMS / SLOTS -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-200 mb-2">
+                                👥 Total Teams / Slots *
+                            </label>
 
-                <input type="number"
-                       name="slots"
-                       x-model="slots"
-                       min="2"
-                       step="1"
-                       class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 w-full">
+                            <input type="number" name="slots" x-model="slots" min="2" step="1"
+                                class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 w-full">
 
-                <p class="text-xs text-gray-400 mt-2">
-                    Recommended for
-                    <span class="font-semibold text-white" x-text="mode.toUpperCase()"></span> :
-                    <span class="text-cyan-400 font-semibold" x-text="recommendedSlots"></span> teams
-                </p>
-            </div>
+                            <p class="text-xs text-gray-400 mt-2">
+                                Recommended for
+                                <span class="font-semibold text-white" x-text="mode.toUpperCase()"></span> :
+                                <span class="text-cyan-400 font-semibold" x-text="recommendedSlots"></span> teams
+                            </p>
+                        </div>
 
-            <!-- REGION -->
-            <div>
-                <label class="block text-sm font-semibold text-gray-200 mb-2">
-                    🌍 Region *
-                </label>
+                        <!-- REGION -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-200 mb-2">
+                                🌍 Region *
+                            </label>
 
-                <select name="region"
-                        class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 w-full">
-                    <option value="India">India</option>
-                    <option value="Asia">Asia</option>
-                    <option value="Global">Global</option>
-                </select>
-            </div>
+                            <select name="region" class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 w-full">
+                                <option value="India">India</option>
+                                <option value="Asia">Asia</option>
+                                <option value="Global">Global</option>
+                            </select>
+                        </div>
 
-        </div>
+                    </div>
 
-        <!-- RIGHT COLUMN -->
-        <div x-data="tournamentTimePicker()" x-init="init()" class="space-y-10">
+                    <!-- RIGHT COLUMN -->
+                    <div x-data="tournamentTimePicker()" x-init="init()" class="space-y-10">
 
-            <!-- MATCH START TIME -->
-            <div class="space-y-4">
-                <label class="block text-sm font-semibold text-gray-200">
-                    🕒 Match Start Time *
-                </label>
+                        <!-- MATCH START TIME -->
+                        <div class="space-y-4">
+                            <label class="block text-sm font-semibold text-gray-200">
+                                🕒 Match Start Time *
+                            </label>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="date"
-                           name="start_date"
-                           x-model="startDate"
-                           :min="today"
-                           class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white
+                            <div class="grid grid-cols-2 gap-4">
+                                <input type="date" name="start_date" x-model="startDate" :min="today"
+                                    class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white
                                   [color-scheme:dark] w-full">
 
-                    <input type="time"
-                           name="start_time_only"
-                           x-model="startTimeOnly"
-                           class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white
+                                <input type="time" name="start_time_only" x-model="startTimeOnly"
+                                    class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white
                                   [color-scheme:dark] w-full">
-                </div>
+                            </div>
 
-                <!-- SMART PRESETS -->
-                <div class="flex flex-wrap gap-2 text-xs pt-1">
-                    <button type="button" @click="setStartIn(30)"
-                        class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
-                        +30 min
-                    </button>
-                    <button type="button" @click="setStartIn(60)"
-                        class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
-                        +1 hour
-                    </button>
-                    <button type="button" @click="setStartTonight()"
-                        class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
-                        Tonight 9 PM
-                    </button>
+                            <!-- SMART PRESETS -->
+                            <div class="flex flex-wrap gap-2 text-xs pt-1">
+                                <button type="button" @click="setStartIn(30)"
+                                    class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
+                                    +30 min
+                                </button>
+                                <button type="button" @click="setStartIn(60)"
+                                    class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
+                                    +1 hour
+                                </button>
+                                <button type="button" @click="setStartTonight()"
+                                    class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
+                                    Tonight 9 PM
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- REGISTRATION CLOSE TIME -->
+                        <div class="space-y-4 pt-6 border-t border-slate-700">
+                            <label class="block text-sm font-semibold text-gray-200">
+                                ⛔ Registration Closes *
+                            </label>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <input type="date" name="registration_close_date" x-model="registrationDate"
+                                    :min="today" :max="startDate"
+                                    class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white
+                                  [color-scheme:dark] w-full">
+
+                                <input type="time" name="registration_close_time_only" x-model="registrationTimeOnly"
+                                    class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white
+                                  [color-scheme:dark] w-full">
+                            </div>
+
+                            <p class="text-xs text-gray-400">
+                                Must be before match start time
+                            </p>
+
+                            <!-- SMART PRESETS -->
+                            <div class="flex flex-wrap gap-2 text-xs">
+                                <button type="button" @click="setCloseBefore(30)"
+                                    class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
+                                    30 min before
+                                </button>
+                                <button type="button" @click="setCloseBefore(60)"
+                                    class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
+                                    1 hour before
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
             </div>
-
-            <!-- REGISTRATION CLOSE TIME -->
-            <div class="space-y-4 pt-6 border-t border-slate-700">
-                <label class="block text-sm font-semibold text-gray-200">
-                    ⛔ Registration Closes *
-                </label>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="date"
-                           name="registration_close_date"
-                           x-model="registrationDate"
-                           :min="today"
-                           :max="startDate"
-                           class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white
-                                  [color-scheme:dark] w-full">
-
-                    <input type="time"
-                           name="registration_close_time_only"
-                           x-model="registrationTimeOnly"
-                           class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white
-                                  [color-scheme:dark] w-full">
-                </div>
-
-                <p class="text-xs text-gray-400">
-                    Must be before match start time
-                </p>
-
-                <!-- SMART PRESETS -->
-                <div class="flex flex-wrap gap-2 text-xs">
-                    <button type="button" @click="setCloseBefore(30)"
-                        class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
-                        30 min before
-                    </button>
-                    <button type="button" @click="setCloseBefore(60)"
-                        class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600">
-                        1 hour before
-                    </button>
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
 
 
             <!-- 🎁 TOURNAMENT REWARD & ENTRY -->
@@ -350,15 +336,62 @@
 
 
             <!-- RULES & DESCRIPTION -->
-            <div class="bg-slate-900 p-8 rounded-3xl border border-slate-700">
-                <h2 class="text-2xl font-bold mb-6">📜 Rules & Description</h2>
+            <div class="bg-slate-900 p-8 rounded-3xl border border-slate-700" x-data="codmSuggestions()">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">📜 Rules & Description</h2>
 
-                <textarea name="description" rows="5" placeholder="About this tournament..."
+                    <!-- Suggestion toggle -->
+                    <button type="button" @click="open = !open"
+                        class="px-4 py-2 rounded-xl text-sm font-semibold
+                   bg-slate-800 hover:bg-slate-700 text-cyan-400 transition">
+                        ✨ Platform Suggestions (CODM)
+                    </button>
+                </div>
+
+                <!-- DESCRIPTION -->
+                <textarea name="description" rows="5" x-model="description" placeholder="About this tournament..."
                     class="w-full px-4 py-3 rounded bg-slate-800 border border-slate-700"></textarea>
 
-                <textarea name="rules" rows="6" placeholder="Tournament rules, bans, reporting rules..."
+                <!-- RULES -->
+                <textarea name="rules" rows="6" x-model="rules" placeholder="Tournament rules, bans, reporting rules..."
                     class="w-full mt-6 px-4 py-3 rounded bg-slate-800 border border-slate-700"></textarea>
+
+                <!-- SUGGESTION PANEL -->
+                <div x-show="open" x-transition class="mt-8 bg-slate-800/80 border border-slate-600 rounded-2xl p-6">
+                    <h3 class="text-lg font-bold mb-4 text-cyan-400">
+                        🎮 GameConnect CODM Suggestions
+                    </h3>
+
+                    <!-- DESCRIPTION PREVIEW -->
+                    <div class="mb-6">
+                        <h4 class="font-semibold mb-2">📌 Suggested Description</h4>
+                        <div class="text-sm text-gray-300 whitespace-pre-line bg-slate-900 p-4 rounded-xl"
+                            x-text="codmDescriptionPreview"></div>
+
+
+                        <button type="button" @click="description = codmDescriptionPreview"
+                            class="mt-3 px-4 py-2 rounded-lg bg-cyan-500/20
+                       text-cyan-400 font-semibold hover:bg-cyan-500/30">
+                            ➕ Add to Description
+                        </button>
+                    </div>
+
+                    <!-- RULES PREVIEW -->
+                    <div>
+                        <h4 class="font-semibold mb-2">📜 Suggested Rules</h4>
+                        <div class="text-sm text-gray-300 whitespace-pre-line bg-slate-900 p-4 rounded-xl max-h-64 overflow-y-auto"
+                            x-text="codmRulesPreview"></div>
+
+
+                        <button type="button" @click="rules = codmRulesPreview"
+                            class="mt-3 px-4 py-2 rounded-lg bg-purple-500/20
+                       text-purple-400 font-semibold hover:bg-purple-500/30">
+                            ➕ Add to Rules
+                        </button>
+                    </div>
+                </div>
             </div>
+
 
             <!-- 🔐 ROOM DETAILS -->
             <div class="bg-slate-900 p-8 rounded-3xl border border-slate-700" x-data="{ addNow: false, showPass: false }">
@@ -561,6 +594,42 @@
         }
     </script>
 
+    <script>
+        function codmSuggestions() {
+            return {
+                open: false,
+
+                description: '',
+                rules: '',
+
+                codmDescriptionPreview: `🎮 Call of Duty Mobile Tournament
+
+Welcome to a competitive CODM lobby hosted on GameConnect.
+This tournament is designed for fair play, fast matchmaking, and smooth results.
+
+🔹 Game Mode: Multiplayer / BR (as mentioned)
+🔹 Entry Type: Solo / Duo / Squad
+🔹 Region-based lobby
+🔹 Organized & moderated by verified hosts
+
+Get ready to compete, rank up, and prove your skills!`,
+
+                codmRulesPreview: `📜 TOURNAMENT RULES (CODM)
+
+1️⃣ Players must join using their registered in-game name only.
+2️⃣ Any form of hacking, glitch abuse, or emulator usage is strictly prohibited.
+3️⃣ Players must be present in the room before match start time.
+4️⃣ Late entries will not be allowed once the match begins.
+5️⃣ Room ID & password will be shared before match start.
+6️⃣ Screenshots or in-game results may be required for verification.
+7️⃣ Abusive language or misconduct will lead to disqualification.
+8️⃣ Organizer decision is final in all disputes.
+
+⚠ Violation of rules may result in permanent ban from future tournaments.`
+
+            }
+        }
+    </script>
 
 
 @endsection
