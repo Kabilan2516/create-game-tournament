@@ -104,11 +104,22 @@ class Tournament extends Model
     {
         return Carbon::now()->greaterThanOrEqualTo($this->start_time);
     }
+
+    public function getHasStartedAttribute(): bool
+    {
+        return Carbon::now()->greaterThanOrEqualTo($this->start_time);
+    }
+
+    public function getHasEndedAttribute(): bool
+    {
+        // optional buffer if needed
+        return Carbon::now()->greaterThan($this->start_time);
+    }
     public function matchResult()
     {
         return $this->hasOne(MatchResult::class);
     }
-       public function matchResults()
+    public function matchResults()
     {
         return $this->hasMany(MatchResult::class);
     }

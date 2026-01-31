@@ -3,6 +3,11 @@
 @section('title', 'Enter Match Results')
 
 @section('dashboard-content')
+    @if (session('clear_draft'))
+        <script>
+            localStorage.removeItem('match_results_draft_{{ $tournament->id }}');
+        </script>
+    @endif
 
     <!-- HEADER -->
     <div class="bg-slate-900 border-b border-slate-800 px-8 py-6">
@@ -67,11 +72,16 @@
         </form>
 
     </section>
+    <script>
+        const DB_RESULTS = @json($dbResults);
+    </script>
+
+
 
     <script>
         /* =========================
-       CONFIG
-    ========================= */
+                   CONFIG
+                ========================= */
         const STORAGE_KEY = 'match_results_draft_{{ $tournament->id }}';
         const participants = @json($joins);
 
@@ -133,7 +143,12 @@
         let savedData = {};
 
         try {
-            savedData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            savedData = {
+                ...DB_RESULTS,
+                ...(JSON.parse(localStorage.getItem(STORAGE_KEY) || {}))
+            };
+
+
         } catch (e) {
             console.warn('Invalid draft data, resetting');
             localStorage.removeItem(STORAGE_KEY);
@@ -167,7 +182,9 @@
                 tableBody.insertAdjacentHTML('beforeend', `
             <tr class="border-t border-slate-800 player-row"
                 data-key="${player.key}"
-                data-join="${player.join_id}">
+                data-join="${player.join_id}"
+                 data-team="${group.team ?? ''}">
+             
 
                 <td class="px-4 py-2 text-center">${rowIndex++}</td>
 
@@ -249,23 +266,26 @@
         function submitResults(publish = false) {
 
             const payload = [];
-
             document.querySelectorAll('.player-row').forEach(row => {
                 const key = row.dataset.key;
-                const joinId = row.dataset.join;
-                const data = savedData[key];
+                const joinId = parseInt(row.dataset.join, 10);
 
-                if (!data) return;
+                if (isNaN(joinId)) return;
+
+                const data = savedData[key] || {};
 
                 payload.push({
                     tournament_join_id: joinId,
                     player_ign: row.querySelector('.player-name').innerText,
-                    rank: data.rank || null,
-                    kills: data.kills || 0,
-                    points: data.points || 0,
+                    team_name: row.dataset.team || null,
+
+                    rank: data.rank !== undefined && data.rank !== '' ? Number(data.rank) : null,
+                    kills: data.kills ? Number(data.kills) : 0,
+                    points: data.points ? Number(data.points) : 0,
                     winner_position: data.winner || null,
                 });
             });
+
 
             if (!payload.length) {
                 alert('No results entered.');

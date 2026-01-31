@@ -1,18 +1,20 @@
-<div class="relative group bg-gradient-to-br from-slate-800 via-slate-900 to-black
+<div
+    class="relative group bg-gradient-to-br from-slate-800 via-slate-900 to-black
     rounded-3xl p-6 border
     {{ $tournament->almost_full ? 'border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]' : 'border-slate-700' }}
     hover:border-cyan-400 transition-all duration-500">
 
     {{-- FEATURED --}}
-    @if($tournament->is_featured)
-        <div class="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-500
+    @if ($tournament->is_featured)
+        <div
+            class="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-500
                     text-black text-xs font-bold px-3 py-1 rounded-full">
             ⭐ FEATURED
         </div>
     @endif
 
     {{-- STARTS SOON --}}
-    @if($tournament->starts_soon)
+    @if ($tournament->starts_soon)
         <div class="absolute top-4 left-4 bg-red-600 text-white text-xs px-3 py-1 rounded-full animate-pulse">
             🔥 Starts Soon
         </div>
@@ -28,7 +30,7 @@
         </span>
 
         {{-- REWARD TYPE BADGE --}}
-        @if($tournament->reward_type === 'platform_points')
+        @if ($tournament->reward_type === 'platform_points')
             <span class="px-3 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400">
                 🎯 Points Reward
             </span>
@@ -51,27 +53,27 @@
     {{-- ORGANIZER --}}
     <div class="flex items-center space-x-3 mb-4">
         <img src="https://ui-avatars.com/api/?name={{ urlencode($tournament->organizer->name) }}&background=0F172A&color=22D3EE"
-             class="w-8 h-8 rounded-full" alt="Organizer">
+            class="w-8 h-8 rounded-full" alt="Organizer">
         <span class="text-sm text-gray-400">
             By <span class="text-white">{{ $tournament->organizer->name }}</span>
         </span>
     </div>
 
     {{-- PRIZE / REWARD DISPLAY --}}
-    @if($tournament->reward_type === 'organizer_prize')
-        <div class="bg-gradient-to-r from-yellow-400/20 to-orange-500/20
+    @if ($tournament->reward_type === 'organizer_prize')
+        <div
+            class="bg-gradient-to-r from-yellow-400/20 to-orange-500/20
                     text-yellow-300 px-4 py-2 rounded-xl mb-4 font-semibold">
             💰 Prize Pool:
             <span class="text-white">
                 ₹{{ number_format(
-                    ($tournament->first_prize ?? 0)
-                  + ($tournament->second_prize ?? 0)
-                  + ($tournament->third_prize ?? 0)
+                    ($tournament->first_prize ?? 0) + ($tournament->second_prize ?? 0) + ($tournament->third_prize ?? 0),
                 ) }}
             </span>
         </div>
     @elseif($tournament->reward_type === 'platform_points')
-        <div class="bg-gradient-to-r from-emerald-400/20 to-green-500/20
+        <div
+            class="bg-gradient-to-r from-emerald-400/20 to-green-500/20
                     text-emerald-300 px-4 py-2 rounded-xl mb-4 font-semibold">
             🎯 Earn Platform Points
         </div>
@@ -85,12 +87,11 @@
     <div class="space-y-2 text-gray-300 text-sm mb-6">
         <p>
             ⏰ Starts:
-            <span class="text-white font-semibold countdown"
-                  data-start="{{ $tournament->start_time }}"></span>
+            <span class="text-white font-semibold countdown" data-start="{{ $tournament->start_time }}"></span>
         </p>
 
         {{-- ENTRY FEE --}}
-        @if($tournament->is_paid)
+        @if ($tournament->is_paid)
             <p>
                 🎟 Entry Fee:
                 <span class="text-white font-semibold">₹{{ $tournament->entry_fee }}</span>
@@ -114,7 +115,7 @@
     <div class="mb-6">
         <div class="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
             <div class="bg-gradient-to-r from-cyan-400 to-purple-500 h-2"
-                 style="width: {{ ($tournament->filled_slots / max(1, $tournament->slots)) * 100 }}%">
+                style="width: {{ ($tournament->filled_slots / max(1, $tournament->slots)) * 100 }}%">
             </div>
         </div>
     </div>
@@ -122,14 +123,14 @@
     {{-- ACTION BUTTONS --}}
     <div class="grid grid-cols-2 gap-4">
         <a href="{{ route('tournaments.show', $tournament) }}"
-           class="py-2 rounded-xl border border-cyan-400 text-cyan-400 text-center
+            class="py-2 rounded-xl border border-cyan-400 text-cyan-400 text-center
                   hover:bg-cyan-400 hover:text-black transition">
             Details
         </a>
 
-        @if(!$tournament->join_closed)
+        @if (!$tournament->join_closed)
             <a href="{{ route('tournaments.join.form', $tournament) }}"
-               class="py-2 rounded-xl font-bold bg-gradient-to-r from-cyan-500 to-purple-600
+                class="py-2 rounded-xl font-bold bg-gradient-to-r from-cyan-500 to-purple-600
                       text-center hover:opacity-90">
                 Join
             </a>
@@ -139,4 +140,21 @@
             </span>
         @endif
     </div>
+    @if ($tournament->matchResult && $tournament->matchResult->is_locked)
+        <div class="w-full mt-3">
+            <a href="{{ route('tournaments.results.show', $tournament) }}"
+                class="flex items-center justify-center gap-2
+                  w-full px-4 py-3 rounded-xl
+                  font-bold text-sm
+                  bg-gradient-to-r from-emerald-500 to-green-600
+                  hover:from-emerald-400 hover:to-green-500
+                  transition shadow-lg shadow-emerald-500/20">
+
+                <span class="text-lg">🏆</span>
+                <span>View Results</span>
+            </a>
+        </div>
+    @endif
+
+
 </div>

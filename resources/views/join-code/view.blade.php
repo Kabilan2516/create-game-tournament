@@ -176,6 +176,43 @@
                         @endif
                     </form>
                 </div>
+                <!-- 📨 MESSAGE TIMELINE -->
+<div class="mt-10 bg-slate-900 p-6 rounded-3xl border border-slate-800">
+    <h3 class="text-xl font-bold mb-6">📨 Updates & Messages</h3>
+
+    @if($join->messages->isEmpty())
+        <p class="text-gray-400 text-sm">No messages yet.</p>
+    @else
+        <div class="space-y-4">
+            @foreach ($join->messages as $message)
+                <div
+                    class="p-4 rounded-xl
+                        {{ $message->sender === 'system'
+                            ? 'bg-slate-800 border border-slate-700'
+                            : 'bg-cyan-500/10 border border-cyan-500/30' }}"
+                >
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-sm font-semibold
+                            {{ $message->sender === 'system'
+                                ? 'text-yellow-400'
+                                : 'text-cyan-400' }}">
+                            {{ ucfirst($message->sender) }}
+                        </span>
+
+                        <span class="text-xs text-gray-500">
+                            {{ $message->created_at->format('d M Y, h:i A') }}
+                        </span>
+                    </div>
+
+                    <p class="text-sm text-gray-200 whitespace-pre-line">
+                        {{ $message->message }}
+                    </p>
+                </div>
+            @endforeach
+        </div>
+    @endif
+</div>
+
             </div>
 
             <!-- RIGHT -->

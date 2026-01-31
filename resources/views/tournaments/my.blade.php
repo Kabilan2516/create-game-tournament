@@ -62,6 +62,8 @@
                     $now->greaterThanOrEqualTo($tournament->registration_close_time);
 
                 $isMatchStarted = $tournament->start_time && $now->greaterThanOrEqualTo($tournament->start_time);
+                $addParticipantsAllowed =
+                    $tournament->start_time && $now->lessThanOrEqualTo($tournament->start_time->copy()->addMinutes(30));
             @endphp
             <!-- TOURNAMENT CARD -->
             <div class="bg-slate-900 p-8 rounded-3xl border border-slate-700 hover:shadow-2xl transition">
@@ -94,7 +96,13 @@
                     @php
                         $now = now();
 
-                        if ($tournament->start_time && $now->greaterThanOrEqualTo($tournament->start_time)) {
+                        if (
+                            $tournament->start_time &&
+                            $now->greaterThanOrEqualTo($tournament->start_time->copy()->addMinutes(30))
+                        ) {
+                            $statusText = 'Match Completed';
+                            $statusColor = 'bg-gray-600';
+                        } elseif ($tournament->start_time && $now->greaterThanOrEqualTo($tournament->start_time)) {
                             $statusText = 'Match Started';
                             $statusColor = 'bg-blue-600';
                         } elseif (
@@ -108,6 +116,7 @@
                             $statusColor = 'bg-green-600';
                         }
                     @endphp
+
 
                     <span class="px-3 py-1 rounded-full text-sm {{ $statusColor }}">
                         {{ $statusText }}
@@ -183,10 +192,14 @@
                         View
                     </a>
                     {{--  Manuval organizer join --}}
-                    <a href="{{ route('organizer.joins.create', $tournament) }}"
-                        class="block text-center py-2 rounded bg-indigo-600 hover:bg-indigo-700 font-semibold">
-                        ➕ Add Participants
-                    </a>
+                    @if ($addParticipantsAllowed)
+                        <a href="{{ route('organizer.joins.create', $tournament) }}"
+                            class="block text-center py-2 rounded bg-indigo-600 hover:bg-indigo-700 font-semibold">
+                            ➕ Add Participants
+                        </a>
+                    @endif
+
+
 
                     {{-- DELETE (blocked after match starts) --}}
                     @if (!$isMatchStarted)
@@ -265,12 +278,12 @@
 
             </div>
         @empty
-       
-                <div
-                    class="mb-4 px-4 py-2 rounded-xl bg-orange-500/20 border border-orange-500 text-orange-300 text-sm font-semibold">
-                    ⚠️ NO rooms created
-                </div>
-        
+
+            <div
+                class="mb-4 px-4 py-2 rounded-xl bg-orange-500/20 border border-orange-500 text-orange-300 text-sm font-semibold">
+                ⚠️ NO rooms created
+            </div>
+
         @endforelse
 
 

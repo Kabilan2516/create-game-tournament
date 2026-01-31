@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Carbon\Carbon;
 use App\Models\Tournament;
+use App\Models\MatchResult;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\TournamentJoin;
@@ -133,6 +134,34 @@ class TournamentController extends Controller
             'roomPassword'
         ));
     }
+
+
+
+
+    public function showresult(Tournament $tournament)
+    {
+        $matchResult = MatchResult::with([
+            'entries' => function ($q) {
+                $q->orderByRaw('winner_position IS NULL')
+                  ->orderBy('winner_position')
+                  ->orderBy('rank');
+            }
+        ])
+        ->where('tournament_id', $tournament->id)
+        ->where('is_locked', true) // 🔒 only published
+        ->first();
+
+        if (!$matchResult) {
+            abort(404, 'Results not published yet');
+        }
+
+        return view('tournaments.result', [
+            'tournament' => $tournament,
+            'result' => $matchResult,
+            'entries' => $matchResult->entries,
+        ]);
+    }
+
 
 
     // Organizer create form
@@ -583,88 +612,90 @@ class TournamentController extends Controller
     {
         return view('tournaments.manual-join');
     }
+    private function generateJoinCode(): string
+    {
+        return 'GS-' .
+            strtoupper(Str::random(4)) . '-' .
+            strtoupper(Str::random(4));
+    }
     public function joinStore(Request $request, Tournament $tournament)
     {
-        // 🔹 CHECK TOURNAMENT STATUS
+        /* =====================================================
+       BASIC CHECKS
+    ===================================================== */
         if ($tournament->status !== 'open') {
-            return back()->withErrors([
-                'error' => 'This tournament is not open for joining.'
-            ]);
+            return back()->withErrors(['error' => 'This tournament is not open for joining.']);
         }
 
-        // 🔹 CHECK SLOT AVAILABILITY (TEAM-BASED)
         if ($tournament->filled_slots >= $tournament->slots) {
-            return back()->withErrors([
-                'error' => 'This tournament is already full.'
-            ]);
+            return back()->withErrors(['error' => 'This tournament is already full.']);
         }
 
-        // 🔹 PREVENT DUPLICATE JOIN (same email)
-        $alreadyJoined = TournamentJoin::where('tournament_id', $tournament->id)
+        if (
+            TournamentJoin::where('tournament_id', $tournament->id)
             ->where('email', $request->email)
-            ->exists();
-
-        if ($alreadyJoined) {
-            return back()->withErrors([
-                'error' => 'You have already joined this tournament with this email.'
-            ]);
+            ->exists()
+        ) {
+            return back()->withErrors(['error' => 'You already joined using this email.']);
         }
 
-        // 🔹 BASIC VALIDATION
+        /* =====================================================
+       VALIDATION
+    ===================================================== */
         $request->validate([
             'team_name' => 'nullable|string|max:255',
-
-            'captain_ign'     => 'required|string|max:100',
-            'captain_game_id' => 'required|string|max:100',
 
             'email' => 'required|email',
             'phone' => 'required|string|max:20',
 
             'notes' => 'nullable|string',
 
-            'members' => 'nullable|array',
-            'members.*.ign' => 'nullable|string|max:100',
-            'members.*.game_id' => 'nullable|string|max:100',
+            'members' => 'required|array|min:1',
+            'members.*.ign' => 'required|string|max:100',
+            'members.*.game_id' => 'required|string|max:100',
 
             'payment_proof' => $tournament->is_paid
                 ? 'required|image|max:2048'
                 : 'nullable',
         ]);
 
-        // 🔹 MODE LIMITS
+        /* =====================================================
+       MODE LIMITS
+    ===================================================== */
         $limits = match (strtolower($tournament->mode)) {
             'solo'  => ['min' => 1, 'max' => 1],
             'duo'   => ['min' => 1, 'max' => 2],
             'squad' => ['min' => 1, 'max' => 4],
         };
 
-        // 🔹 NORMALIZE MEMBERS
-        $members = collect($request->members ?? [])
-            ->filter(
-                fn($m) =>
-                !empty($m['ign']) && !empty($m['game_id'])
-            )
-            ->values()
-            ->toArray();
+        /* =====================================================
+       NORMALIZE MEMBERS
+    ===================================================== */
+        $members = collect($request->members)
+            ->filter(fn($m) => !empty($m['ign']) && !empty($m['game_id']))
+            ->values();
 
-        // 🔹 TOTAL MEMBER COUNT = CAPTAIN + MEMBERS
-        $totalMembers = 1 + count($members);
+        $totalMembers = $members->count();
 
         if ($totalMembers < $limits['min'] || $totalMembers > $limits['max']) {
             return back()->withErrors([
                 'error' =>
                 ucfirst($tournament->mode) .
-                    " teams must have between {$limits['min']} and {$limits['max']} players."
+                    " requires {$limits['min']}–{$limits['max']} players."
             ]);
         }
+
+        /* =====================================================
+       CAPTAIN = FIRST MEMBER
+    ===================================================== */
+        $captain = $members->first();
 
         DB::beginTransaction();
 
         try {
-
-            $joinCode = strtoupper(Str::random(10));
-
-            // 🔹 PAYMENT LOGIC
+            /* =====================================================
+           PAYMENT LOGIC
+        ===================================================== */
             $isPaidTournament = (bool) $tournament->is_paid;
             $entryFee = $isPaidTournament ? $tournament->entry_fee : 0;
 
@@ -677,33 +708,53 @@ class TournamentController extends Controller
 
             $finalStatus = $isAutoApproved ? 'approved' : 'pending';
 
-            // 🔹 CREATE JOIN
-            $join = TournamentJoin::create([
-                'tournament_id' => $tournament->id,
-                'organizer_id'  => $tournament->organizer_id,
-                'user_id'       => null,
+            /* =====================================================
+           JOIN CODE (SAFE, NO DB LOOP)
+        ===================================================== */
+            $attempts = 0;
+            $maxAttempts = 3;
 
-                'join_code' => $joinCode,
+            do {
+                try {
+                    $joinCode = $this->generateJoinCode();
 
-                'team_name' => $request->team_name,
-                'mode'      => strtolower($tournament->mode),
+                    $join = TournamentJoin::create([
+                        'tournament_id' => $tournament->id,
+                        'organizer_id'  => $tournament->organizer_id,
+                        'user_id'       => Auth::id(), // null if guest
 
-                'captain_ign'     => $request->captain_ign,
-                'captain_game_id' => $request->captain_game_id,
+                        'join_code' => $joinCode,
 
-                'email' => $request->email,
-                'phone' => $request->phone,
+                        'team_name' => $request->team_name,
+                        'mode'      => strtolower($tournament->mode),
 
-                'is_paid'        => $isPaidTournament,
-                'entry_fee'      => $entryFee,
-                'payment_status' => $isPaidTournament ? 'pending' : 'not_required',
+                        // 🔑 CAPTAIN
+                        'captain_ign'     => $captain['ign'],
+                        'captain_game_id' => $captain['game_id'],
 
-                'status' => $finalStatus,
-                'notes'  => $request->notes,
-            ]);
+                        'email' => $request->email,
+                        'phone' => $request->phone,
 
-            // 🔹 SAVE EXTRA MEMBERS
-            foreach ($members as $member) {
+                        'is_paid'        => $isPaidTournament,
+                        'entry_fee'      => $entryFee,
+                        'payment_status' => $isPaidTournament ? 'pending' : 'not_required',
+
+                        'status' => $finalStatus,
+                        'notes'  => $request->notes,
+                    ]);
+
+                    break;
+                } catch (\Illuminate\Database\QueryException $e) {
+                    if ($e->getCode() !== '23000' || ++$attempts >= $maxAttempts) {
+                        throw $e;
+                    }
+                }
+            } while (true);
+
+            /* =====================================================
+           SAVE OTHER MEMBERS (SKIP CAPTAIN)
+        ===================================================== */
+            foreach ($members->skip(1) as $member) {
                 TournamentJoinMember::create([
                     'tournament_join_id' => $join->id,
                     'ign' => $member['ign'],
@@ -711,7 +762,9 @@ class TournamentController extends Controller
                 ]);
             }
 
-            // 🔹 PAYMENT PROOF
+            /* =====================================================
+           PAYMENT PROOF
+        ===================================================== */
             if ($isPaidTournament && $request->hasFile('payment_proof')) {
                 MediaUploadService::upload(
                     $request->file('payment_proof'),
@@ -721,23 +774,19 @@ class TournamentController extends Controller
                 );
             }
 
-            // 🔹 SYSTEM MESSAGE
-            $message = $finalStatus === 'approved'
-                ? "✅ Your team has been APPROVED for the tournament:\n\n"
-                . "🏆 Tournament: {$tournament->title}\n"
-                . "🎮 Mode: " . ucfirst($join->mode) . "\n"
-                . "🆔 Join ID: {$join->join_code}\n\n"
-                . "Room details will be shared soon."
-                : "✅ Your application has been submitted successfully!\n\n"
-                . "🏆 Tournament: {$tournament->title}\n"
-                . "🎮 Mode: " . ucfirst($join->mode) . "\n"
-                . "🆔 Join Code: {$joinCode}\n\n"
-                . "⏳ Status: Pending approval.";
-
+            /* =====================================================
+           SYSTEM MESSAGE
+        ===================================================== */
             TournamentJoinMessage::create([
                 'tournament_join_id' => $join->id,
                 'sender' => 'system',
-                'message' => $message,
+                'message' =>
+                "🏆 Tournament: {$tournament->title}\n" .
+                    "🎮 Mode: " . ucfirst($join->mode) . "\n" .
+                    "🆔 Join Code: {$joinCode}\n\n" .
+                    ($finalStatus === 'approved'
+                        ? "✅ Your team has been APPROVED!"
+                        : "⏳ Your application is pending approval."),
                 'is_read' => false,
             ]);
 
@@ -752,17 +801,14 @@ class TournamentController extends Controller
                 ->with('success', 'You have successfully joined! 🎉')
                 ->with('join_code', $joinCode);
         } catch (\Throwable $e) {
-
             DB::rollBack();
 
             return back()->withErrors([
                 'error' => 'Something went wrong while joining.',
-                'debug' => $e->getMessage(), // remove in prod
+                'debug' => $e->getMessage(), // remove in production
             ]);
         }
     }
-
-
     // Organizer - My Tournaments
     public function myTournaments()
     {
@@ -1204,45 +1250,75 @@ class TournamentController extends Controller
 
 
 
-    public function dummyJoin(Tournament $tournament)
+
+    public function dummyJoin(Tournament $tournament, Request $request)
     {
         abort_if(!app()->environment(['local', 'staging']), 403);
 
         DB::beginTransaction();
 
         try {
-            $mode = strtolower($tournament->mode); // solo | duo | squad
+            $mode = strtolower($tournament->mode);
 
             $teamSize = match ($mode) {
-                'duo' => 2,
+                'duo'   => 2,
                 'squad' => 4,
                 default => 1,
             };
 
-            $totalSlots = $tournament->slots; // e.g. 100 players / 50 teams
-            $joinCount = 0;
+            // 🔹 OPTION: RESET EXISTING?
+            $reset = $request->boolean('reset'); // true / false
 
-            while ($joinCount < $totalSlots) {
+            if ($reset) {
+                // 🧹 ERASE EVERYTHING
+                DB::table('tournament_join_members')
+                    ->whereIn(
+                        'tournament_join_id',
+                        TournamentJoin::where('tournament_id', $tournament->id)->pluck('id')
+                    )->delete();
 
-                $joinCode = strtoupper(Str::random(10));
+                TournamentJoin::where('tournament_id', $tournament->id)->delete();
 
+                $tournament->update(['filled_slots' => 0]);
+            }
+
+            // 🔹 CURRENT STATE
+            $alreadyFilled = $tournament->fresh()->filled_slots;
+            $remainingSlots = $tournament->slots - $alreadyFilled;
+
+            if ($remainingSlots <= 0) {
+                return back()->with('info', 'Tournament already full.');
+            }
+
+            $startIndex = $alreadyFilled + 1;
+
+            for ($i = 0; $i < $remainingSlots; $i++) {
+
+                // 🔐 Join Code (collision-safe)
+                do {
+                    $joinCode = 'GS-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4));
+                } while (
+                    TournamentJoin::where('join_code', $joinCode)->exists()
+                );
+
+                $teamNumber = $startIndex + $i;
+
+                // 👑 CAPTAIN (FIRST PLAYER)
                 $join = TournamentJoin::create([
                     'tournament_id' => $tournament->id,
                     'organizer_id'  => $tournament->organizer_id,
-                    'user_id'       => null, // guest
-                    'join_code'     => $joinCode,
+                    'user_id'       => null,
 
-                    'team_name' => $mode === 'solo'
-                        ? null
-                        : 'Team ' . ($joinCount + 1),
+                    'join_code' => $joinCode,
 
-                    'mode' => $mode,
+                    'team_name' => $mode === 'solo' ? null : "Team {$teamNumber}",
+                    'mode'      => $mode,
 
-                    'captain_ign'     => 'Player_' . ($joinCount + 1),
-                    'captain_game_id' => 'GAME_' . rand(10000, 99999),
+                    'captain_ign'     => "Player_{$teamNumber}_1",
+                    'captain_game_id' => "GAME_" . str_pad($teamNumber, 5, '0', STR_PAD_LEFT),
 
-                    'email' => 'dummy' . $joinCount . '@test.com',
-                    'phone' => '900000000' . rand(1, 9),
+                    'email' => "dummy{$teamNumber}@test.com",
+                    'phone' => '90000000' . rand(10, 99),
 
                     'is_paid'        => false,
                     'entry_fee'      => 0,
@@ -1252,27 +1328,67 @@ class TournamentController extends Controller
                     'notes'  => 'Dummy auto join',
                 ]);
 
-                // Add members for duo/squad
-                if ($teamSize > 1) {
-                    for ($i = 1; $i < $teamSize; $i++) {
-                        TournamentJoinMember::create([
-                            'tournament_join_id' => $join->id,
-                            'ign' => 'Player_' . ($joinCount + 1) . '_' . $i,
-                            'game_id' => 'GAME_' . rand(10000, 99999),
-                        ]);
-                    }
+                // 👥 OTHER MEMBERS
+                for ($m = 2; $m <= $teamSize; $m++) {
+                    TournamentJoinMember::create([
+                        'tournament_join_id' => $join->id,
+                        'ign' => "Player_{$teamNumber}_{$m}",
+                        'game_id' => "GAME_" . rand(10000, 99999),
+                    ]);
                 }
-
-                $joinCount++;
             }
 
-            $tournament->update([
-                'filled_slots' => $totalSlots
-            ]);
+            // 🔢 UPDATE FILLED SLOTS
+            $tournament->increment('filled_slots', $remainingSlots);
 
             DB::commit();
 
-            return back()->with('success', 'Dummy players joined successfully!');
+            return back()->with('success', "{$remainingSlots} dummy teams joined successfully!");
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+    public function dummyResults(Tournament $tournament)
+    {
+        abort_if(!app()->environment(['local', 'staging']), 403);
+
+        DB::beginTransaction();
+
+        try {
+            $joins = TournamentJoin::where('tournament_id', $tournament->id)
+                ->where('status', 'approved')
+                ->get();
+
+            if ($joins->isEmpty()) {
+                return back()->with('error', 'No joined teams found.');
+            }
+
+            // 🧹 Clear old results
+            DB::table('tournament_results')
+                ->where('tournament_id', $tournament->id)
+                ->delete();
+
+            $position = 1;
+
+            foreach ($joins as $join) {
+
+                DB::table('tournament_results')->insert([
+                    'tournament_id'      => $tournament->id,
+                    'tournament_join_id' => $join->id,
+                    'position'           => $position,
+                    'kills'              => rand(0, 15),
+                    'points'             => max(0, 100 - ($position * 5)),
+                    'created_at'         => now(),
+                    'updated_at'         => now(),
+                ]);
+
+                $position++;
+            }
+
+            DB::commit();
+
+            return back()->with('success', 'Dummy results generated successfully!');
         } catch (\Throwable $e) {
             DB::rollBack();
             throw $e;

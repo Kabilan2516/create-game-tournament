@@ -33,6 +33,7 @@ class JoinCodeController extends Controller
     /* =========================
        LOOKUP JOIN CODE
     ========================= */
+
     public function lookup(Request $request)
     {
         $request->validate([
@@ -41,7 +42,8 @@ class JoinCodeController extends Controller
 
         $join = TournamentJoin::with([
             'tournament',
-            'members'
+            'members',
+            'messages' => fn($q) => $q->orderBy('created_at')
         ])
             ->where('join_code', strtoupper($request->join_code))
             ->first();
@@ -67,6 +69,7 @@ class JoinCodeController extends Controller
             'isMatchStarted'
         ));
     }
+
 
     /* =========================
        UPDATE TEAM DETAILS

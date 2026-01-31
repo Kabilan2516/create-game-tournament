@@ -55,20 +55,6 @@
 
                     </div>
 
-                    <!-- CAPTAIN INFO -->
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="text-sm text-gray-400">Captain In-Game ID *</label>
-                            <input type="text" name="captain_game_id" required
-                                class="w-full mt-1 px-4 py-3 rounded bg-slate-800 border border-slate-700">
-                        </div>
-
-                        <div>
-                            <label class="text-sm text-gray-400">Captain IGN *</label>
-                            <input type="text" name="captain_ign" required
-                                class="w-full mt-1 px-4 py-3 rounded bg-slate-800 border border-slate-700">
-                        </div>
-                    </div>
 
                     <!-- CONTACT -->
                     <div class="grid md:grid-cols-2 gap-6">
@@ -85,32 +71,49 @@
                         </div>
                     </div>
 
-                    <!-- 🔹 TEAM MEMBERS -->
-                    <template x-if="members.length > 0">
-                        <div class="space-y-6">
-                            <h3 class="text-xl font-bold">👥 Team Members</h3>
 
-                            <template x-for="(member, index) in members" :key="index">
-                                <div class="grid md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label class="text-sm text-gray-400">
-                                            Member <span x-text="index+1"></span> In-Game ID
-                                        </label>
-                                        <input type="text" :name="`members[${index}][game_id]`"
-                                            class="w-full mt-1 px-4 py-3 rounded bg-slate-800 border border-slate-700">
-                                    </div>
+                    <!-- 🔹 TEAM / PLAYER DETAILS -->
+                    <div class="space-y-6">
 
-                                    <div>
-                                        <label class="text-sm text-gray-400">
-                                            Member <span x-text="index+1"></span> IGN
-                                        </label>
-                                        <input type="text" :name="`members[${index}][ign]`"
-                                            class="w-full mt-1 px-4 py-3 rounded bg-slate-800 border border-slate-700">
-                                    </div>
+                        <h3 class="text-xl font-bold">
+                            👥 {{ strtolower($tournament->mode) === 'solo' ? 'Player Details' : 'Team Members' }}
+                        </h3>
+
+                        <template x-for="(member, index) in members" :key="index">
+                            <div class="grid md:grid-cols-2 gap-6 bg-slate-800/40 p-6 rounded-2xl border border-slate-700">
+
+                                <div class="md:col-span-2">
+                                    <p class="font-semibold text-cyan-400">
+                                        <span
+                                            x-text="
+                        index === 0
+                            ? '⭐ Captain'
+                            : 'Member ' + (index + 1)
+                    "></span>
+                                    </p>
                                 </div>
-                            </template>
-                        </div>
-                    </template>
+
+                                <!-- GAME ID -->
+                                <div>
+                                    <label class="text-sm text-gray-400">
+                                        In-Game ID *
+                                    </label>
+                                    <input type="text" :name="`members[${index}][game_id]`" required
+                                        class="w-full mt-1 px-4 py-3 rounded bg-slate-900 border border-slate-700">
+                                </div>
+
+                                <!-- IGN -->
+                                <div>
+                                    <label class="text-sm text-gray-400">
+                                        In-Game Name (IGN) *
+                                    </label>
+                                    <input type="text" :name="`members[${index}][ign]`" required
+                                        class="w-full mt-1 px-4 py-3 rounded bg-slate-900 border border-slate-700">
+                                </div>
+
+                            </div>
+                        </template>
+                    </div>
 
                     <!-- NOTES -->
                     <div>
@@ -219,23 +222,26 @@
                 members: [],
 
                 init() {
-                    this.setMembers(mode);
+                    this.setupMembers(mode);
                 },
 
-                setMembers(mode) {
-                    this.members = [];
+                setupMembers(mode) {
+                    if (mode === 'solo') {
+                        this.members = [{}]; // Captain only
+                    }
 
                     if (mode === 'duo') {
-                        this.members = [{}]; // 1 extra member
+                        this.members = [{}, {}]; // Captain + 1
                     }
 
                     if (mode === 'squad') {
-                        this.members = [{}, {}, {}]; // 3 extra members
+                        this.members = [{}, {}, {}, {}]; // Captain + 3
                     }
                 }
             }
         }
     </script>
+
 
 
 @endsection

@@ -82,24 +82,46 @@
                 </div>
 
                 <!-- CTA BUTTON -->
-                <div class="flex space-x-4">
+                <div class="flex flex-wrap gap-4">
 
-                    @if ($tournament->status === 'open' && $slotsLeft > 0)
-                        <a href="{{ route('tournaments.join', $tournament->id) }}"
-                            class="px-8 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-xl font-bold shadow-lg hover:scale-105 transition">
+                    {{-- 🏆 RESULTS (ONLY IF PUBLISHED) --}}
+                    @if ($tournament->matchResult && $tournament->matchResult->is_locked)
+                        <a href="{{ route('tournaments.results.show', $tournament) }}"
+                            class="px-8 py-3 rounded-xl font-bold
+                  bg-gradient-to-r from-emerald-500 to-green-600
+                  hover:from-emerald-400 hover:to-green-500
+                  shadow-lg transition flex items-center gap-2">
+                            🏆 View Results
+                        </a>
+
+                        {{-- 🚀 JOIN (ONLY BEFORE START) --}}
+                    @elseif(!$tournament->join_closed && $slotsLeft > 0)
+                        <a href="{{ route('tournaments.join.form', $tournament) }}"
+                            class="px-8 py-3 rounded-xl font-bold
+                  bg-gradient-to-r from-cyan-500 to-purple-600
+                  hover:scale-105 transition shadow-lg">
                             🚀 Join Tournament
                         </a>
-                    @elseif($tournament->status === 'full')
-                        <button disabled class="px-8 py-3 bg-gray-600 rounded-xl font-bold cursor-not-allowed">
+
+                        {{-- ❌ FULL --}}
+                    @elseif(!$tournament->join_closed && $slotsLeft <= 0)
+                        <button disabled
+                            class="px-8 py-3 rounded-xl font-bold
+                   bg-gray-600 cursor-not-allowed">
                             ❌ Slots Full
                         </button>
+
+                        {{-- 🔒 STARTED / CLOSED --}}
                     @else
-                        <button disabled class="px-8 py-3 bg-gray-700 rounded-xl font-bold cursor-not-allowed">
+                        <button disabled
+                            class="px-8 py-3 rounded-xl font-bold
+                   bg-gray-700 cursor-not-allowed">
                             🔒 Registration Closed
                         </button>
                     @endif
 
                 </div>
+
             </div>
             <!-- Right: Banner Image -->
             <div class="relative group float">
@@ -196,23 +218,63 @@
                 @endif
 
                 <!-- ROOM DETAILS -->
-                @if ($tournament->room_released)
+                <!-- ROOM DETAILS -->
+                @if ($tournament->hasEnded)
+
+                    {{-- 🏁 MATCH ENDED --}}
+                    <div class="bg-slate-900 p-8 rounded-3xl border border-gray-700">
+                        <h2 class="text-xl font-bold mb-2 text-gray-300">🏁 Match Ended</h2>
+                        <p class="text-gray-400">
+                            This match has already ended. Room details are no longer active.
+                        </p>
+                    </div>
+                @elseif($tournament->room_released)
+                    {{-- 🔐 ROOM AVAILABLE --}}
                     <div class="bg-slate-900 p-8 rounded-3xl border border-green-700">
                         <h2 class="text-2xl font-bold mb-4">🔐 Room Details</h2>
 
                         <div class="space-y-3 text-lg">
-                            <p>🆔 Room ID: <span class="font-bold text-cyan-400">{{ $roomId }}</span></p>
-                            <p>🔑 Password: <span class="font-bold text-purple-400">{{ $roomPassword }}</span></p>
+                            <p>
+                                🆔 Room ID:
+                                
+                            </p>
+
+                            <p>
+                                🔑 Password:
+                        
+                            </p>
+                            <span>Go to the <a href="{{ join.code.index }}">join code page enter your tornament registration code you get your room id and pass</a></span>
                         </div>
+
+                        @if ($tournament->hasStarted)
+                            <p class="mt-4 text-sm text-green-400">
+                                🟢 Match is LIVE — join immediately
+                            </p>
+                        @endif
+                    </div>
+                @elseif($tournament->hasStarted)
+                    {{-- ⚠️ STARTED BUT NOT RELEASED --}}
+                    <div class="bg-slate-900 p-8 rounded-3xl border border-red-700">
+                        <h2 class="text-xl font-bold mb-2 text-red-400">⚠️ Room Not Released</h2>
+                        <p class="text-gray-400">
+                            The match has started, but the organizer has not released room details yet.
+                            Please contact the organizer immediately.
+                        </p>
                     </div>
                 @else
+                    {{-- 🔒 UPCOMING --}}
                     <div class="bg-slate-900 p-8 rounded-3xl border border-yellow-700">
                         <h2 class="text-xl font-bold mb-2 text-yellow-400">🔒 Room Details Locked</h2>
                         <p class="text-gray-400">
-                            Room ID & Password will be shared before the match starts.
+                            Room ID & password will be shared shortly before the match starts.
+                        </p>
+                        <p class="text-sm text-gray-500 mt-2">
+                            ⏰ Match starts at {{ $tournament->start_time->format('d M Y, h:i A') }}
                         </p>
                     </div>
+
                 @endif
+
 
             </div>
 

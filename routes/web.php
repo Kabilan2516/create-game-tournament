@@ -30,7 +30,26 @@ use App\Http\Controllers\SettingsController;
 // 🔹 LANDING PAGE
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+/*
+|--------------------------------------------------------------------------
+| Public Pages (Footer / Legal / Support)
+|--------------------------------------------------------------------------
+*/
 
+Route::view('/terms-and-conditions', 'pages.terms')
+    ->name('terms');
+
+Route::view('/privacy-policy', 'pages.privacy')
+    ->name('privacy');
+
+Route::view('/refund-policy', 'pages.refund')
+    ->name('refund.policy');
+
+Route::view('/help-center', 'pages.help')
+    ->name('help.center');
+
+Route::view('/contact-us', 'pages.contact')
+    ->name('contact');
 // 🔹 AUTH UI PAGES (GET ROUTES – FOR YOUR CUSTOM VIEWS)
 
 // Login Page
@@ -103,6 +122,11 @@ Route::post('/tournaments/{tournament}/join', [TournamentController::class, 'joi
 // Public organizer profile
 Route::get('/organizers/{user}', [OrganizerController::class, 'publicProfile'])
     ->name('organizers.public');
+// Public Tournament Results
+Route::get(
+    '/tournaments/{tournament}/results',
+    [TournamentController::class, 'showresult']
+)->name('tournaments.results.show');
 
 // 🔹 ORGANIZER ROUTES (ONLY LOGGED IN + ORGANIZER ROLE)
 Route::middleware(['auth', 'role:organizer'])->group(function () {
