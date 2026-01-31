@@ -143,13 +143,13 @@ class TournamentController extends Controller
         $matchResult = MatchResult::with([
             'entries' => function ($q) {
                 $q->orderByRaw('winner_position IS NULL')
-                  ->orderBy('winner_position')
-                  ->orderBy('rank');
+                    ->orderBy('winner_position')
+                    ->orderBy('rank');
             }
         ])
-        ->where('tournament_id', $tournament->id)
-        ->where('is_locked', true) // 🔒 only published
-        ->first();
+            ->where('tournament_id', $tournament->id)
+            ->where('is_locked', true) // 🔒 only published
+            ->first();
 
         if (!$matchResult) {
             abort(404, 'Results not published yet');
@@ -569,6 +569,19 @@ class TournamentController extends Controller
 
     public function joinForm(Tournament $tournament)
     {
+        $now = now();
+
+        // 🔐 BLOCK JOIN IF MATCH STARTED
+        if (
+            $tournament->start_time &&
+            $now->greaterThanOrEqualTo($tournament->start_time)
+        ) {
+            return redirect()
+                ->route('tournaments.show', $tournament)
+                ->withErrors([
+                    'error' => '⛔ Registration closed. The match has already started.'
+                ]);
+        }
         // Organizer info
         $organizer = $tournament->organizer;
 
