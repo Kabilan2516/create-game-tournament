@@ -5,6 +5,13 @@
     <!-- BASIC -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{-- PWA --}}
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#22c55e">
+
+    {{-- Icons --}}
+    <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png">
+    <link rel="icon" href="/favicon/favicon.ico">
 
     @php
         $appName = config('app.name', 'GameConnect');
@@ -31,13 +38,23 @@
     <!-- CANONICAL -->
     <link rel="canonical" href="{{ url()->current() }}">
 
-    <!-- OPEN GRAPH -->
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="{{ $ogTitle }}">
-    <meta property="og:description" content="{{ $ogDescription }}">
-    <meta property="og:url" content="{{ url()->current() }}">
-    <meta property="og:site_name" content="{{ $appName }}">
-    <meta property="og:image" content="{{ $ogImage }}">
+
+    {{-- SEO / WhatsApp Meta --}}
+    @hasSection('meta')
+        @yield('meta')
+    @else
+        {{-- Default Meta --}}
+        <meta property="og:title" content="{{ $appName }} – Online Gaming Tournaments">
+        <meta property="og:description"
+            content="Join online gaming tournaments, compete with top players, and win real prizes on {{ $appName }}.">
+        <meta property="og:image" content="{{ asset('images/web-app-manifest-512x512.png') }}">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:site_name" content="{{ $appName }}">
+        <meta property="og:type" content="website">
+
+        <meta name="description"
+            content="GameConnect is a platform to host and join competitive online gaming tournaments.">
+    @endif
 
     <!-- TWITTER CARD -->
     <meta name="twitter:card" content="summary_large_image">
@@ -47,6 +64,9 @@
 
     <!-- CSRF -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <!-- this meta tag from page  -->
+    @yield('meta')
 
     <!-- FAVICON -->
     <link rel="icon" href="{{ asset('favicon.ico') }}">

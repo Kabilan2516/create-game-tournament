@@ -2,6 +2,14 @@
 
 @section('title', $tournament->title . ' – GameConnect')
 
+@section('meta')
+    <meta property="og:title" content="{{ $tournament->title }}">
+    <meta property="og:description" content="🏆 Prize ₹{{ $tournament->prize }} | 📅 {{ $tournament->start_date }}">
+    <meta property="og:image" content="{{ $tournament->banner_url }}">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:type" content="website">
+@endsection
+
 @section('content')
 
     <!-- 🔹 HERO / COVER SECTION -->

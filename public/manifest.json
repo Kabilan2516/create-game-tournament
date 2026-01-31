@@ -1,0 +1,35 @@
+{
+  "name": "GameConnect Notify",
+  "short_name": "GC Notify",
+  "description": "Track tournament approvals, room details and live updates from GameConnect.",
+
+  "start_url": "/",
+  "scope": "./",
+
+  "display": "standalone",
+  "display_override": ["standalone"],
+
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+
+  "orientation": "portrait",
+
+  "lang": "en",
+
+  "categories": ["games", "sports", "communication"],
+
+  "icons": [
+    {
+      "src": "favicon/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "favicon/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

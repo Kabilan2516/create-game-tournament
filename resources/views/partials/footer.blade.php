@@ -34,10 +34,10 @@
             <h5 class="font-semibold mb-4 text-white">Supported Games</h5>
             <ul class="space-y-2 text-gray-400">
                 <li>Call of Duty: Mobile</li>
-                <li>PUBG Mobile</li>
-                <li>Free Fire</li>
+                <li>PUBG Mobile (Coming Soon)</li>
+                <li>Free Fire (Coming Soon)</li>
                 <li>Valorant (Coming Soon)</li>
-                <li>More esports titles</li>
+                <li>More esports titles (Coming Soon)</li>
             </ul>
         </div>
 

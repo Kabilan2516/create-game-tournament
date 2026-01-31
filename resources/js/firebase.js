@@ -1,9 +1,6 @@
-
-
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 
-// 🔥 Firebase config
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -12,12 +9,11 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Init Firebase
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-// 🔔 Ask permission & get token
-export async function initFirebaseMessaging() {
+// 🔔 Ask permission & get token (CALL THIS ON USER ACTION)
+export async function requestFirebasePermission() {
     try {
         const permission = await Notification.requestPermission();
 
@@ -48,8 +44,8 @@ export async function initFirebaseMessaging() {
 onMessage(messaging, payload => {
     console.log("📩 Foreground message:", payload);
 
-    new Notification(payload.notification.title, {
-        body: payload.notification.body,
-        icon: "/favicon.ico",
+    new Notification(payload.notification?.title ?? "GameConnect", {
+        body: payload.notification?.body,
+        icon: "/favicon/favicon-96x96.png", // ✅ FIXED ICON PATH
     });
 });
