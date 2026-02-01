@@ -8,10 +8,12 @@ use App\Models\MatchResult;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\TournamentJoin;
+use App\Mail\TournamentJoinedMail;
 use Illuminate\Support\Facades\DB;
 use App\Models\TournamentJoinMember;
 use App\Services\MediaUploadService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use App\Models\TournamentJoinMessage;
 use Illuminate\Support\Facades\Crypt;
 
@@ -634,8 +636,8 @@ class TournamentController extends Controller
     public function joinStore(Request $request, Tournament $tournament)
     {
         /* =====================================================
-       BASIC CHECKS
-    ===================================================== */
+        BASIC CHECKS
+        ===================================================== */
         if ($tournament->status !== 'open') {
             return back()->withErrors(['error' => 'This tournament is not open for joining.']);
         }
@@ -653,8 +655,8 @@ class TournamentController extends Controller
         }
 
         /* =====================================================
-       VALIDATION
-    ===================================================== */
+        VALIDATION
+        ===================================================== */
         $request->validate([
             'team_name' => 'nullable|string|max:255',
 
@@ -673,8 +675,8 @@ class TournamentController extends Controller
         ]);
 
         /* =====================================================
-       MODE LIMITS
-    ===================================================== */
+        MODE LIMITS
+        ===================================================== */
         $limits = match (strtolower($tournament->mode)) {
             'solo'  => ['min' => 1, 'max' => 1],
             'duo'   => ['min' => 1, 'max' => 2],
@@ -682,8 +684,8 @@ class TournamentController extends Controller
         };
 
         /* =====================================================
-       NORMALIZE MEMBERS
-    ===================================================== */
+        NORMALIZE MEMBERS
+        ===================================================== */
         $members = collect($request->members)
             ->filter(fn($m) => !empty($m['ign']) && !empty($m['game_id']))
             ->values();
@@ -699,16 +701,16 @@ class TournamentController extends Controller
         }
 
         /* =====================================================
-       CAPTAIN = FIRST MEMBER
-    ===================================================== */
+        CAPTAIN = FIRST MEMBER
+        ===================================================== */
         $captain = $members->first();
 
         DB::beginTransaction();
 
         try {
             /* =====================================================
-           PAYMENT LOGIC
-        ===================================================== */
+            PAYMENT LOGIC
+            ===================================================== */
             $isPaidTournament = (bool) $tournament->is_paid;
             $entryFee = $isPaidTournament ? $tournament->entry_fee : 0;
 
@@ -722,8 +724,8 @@ class TournamentController extends Controller
             $finalStatus = $isAutoApproved ? 'approved' : 'pending';
 
             /* =====================================================
-           JOIN CODE (SAFE, NO DB LOOP)
-        ===================================================== */
+            JOIN CODE (SAFE, NO DB LOOP)
+            ===================================================== */
             $attempts = 0;
             $maxAttempts = 3;
 
@@ -765,8 +767,8 @@ class TournamentController extends Controller
             } while (true);
 
             /* =====================================================
-           SAVE OTHER MEMBERS (SKIP CAPTAIN)
-        ===================================================== */
+            SAVE OTHER MEMBERS (SKIP CAPTAIN)
+            ===================================================== */
             foreach ($members->skip(1) as $member) {
                 TournamentJoinMember::create([
                     'tournament_join_id' => $join->id,
@@ -776,8 +778,8 @@ class TournamentController extends Controller
             }
 
             /* =====================================================
-           PAYMENT PROOF
-        ===================================================== */
+            PAYMENT PROOF
+            ===================================================== */
             if ($isPaidTournament && $request->hasFile('payment_proof')) {
                 MediaUploadService::upload(
                     $request->file('payment_proof'),
@@ -788,8 +790,8 @@ class TournamentController extends Controller
             }
 
             /* =====================================================
-           SYSTEM MESSAGE
-        ===================================================== */
+            SYSTEM MESSAGE
+            ===================================================== */
             TournamentJoinMessage::create([
                 'tournament_join_id' => $join->id,
                 'sender' => 'system',
@@ -808,6 +810,11 @@ class TournamentController extends Controller
             }
 
             DB::commit();
+            if (config('features.mail.tournament_join')) {
+                Mail::to($join->email)->send(
+                    new TournamentJoinedMail($tournament, $join, $joinCode)
+                );
+            }
 
             return redirect()
                 ->route('tournaments.show', $tournament->id)
