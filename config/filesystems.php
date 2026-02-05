@@ -2,6 +2,7 @@
 
 return [
 
+    'disk' => env('MEDIA_DISK', 'local'),
     /*
     |--------------------------------------------------------------------------
     | Default Filesystem Disk

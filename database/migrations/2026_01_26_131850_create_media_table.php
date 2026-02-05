@@ -22,7 +22,8 @@ return new class extends Migration
             $table->string('file_path');
             $table->string('mime_type')->nullable();
             $table->integer('size')->nullable();
-
+            $table->string('disk')->default('local');
+            $table->string('url')->nullable();
             $table->timestamps();
 
             $table->index(['model_type', 'model_id']);

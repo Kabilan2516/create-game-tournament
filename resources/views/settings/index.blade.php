@@ -55,12 +55,8 @@
             {{-- ================================================= --}}
             <form x-show="tab==='profile'" x-transition method="POST" action="{{ route('settings.profile.update') }}"
                 enctype="multipart/form-data" x-data="{
-                    bannerPreview: '{{ optional($organizer->media->where('collection', 'banner')->last())->file_path
-                        ? asset('storage/' . optional($organizer->media->where('collection', 'banner')->last())->file_path)
-                        : '' }}',
-                    avatarPreview: '{{ optional($organizer->media->where('collection', 'avatar')->last())->file_path
-                        ? asset('storage/' . optional($organizer->media->where('collection', 'avatar')->last())->file_path)
-                        : '' }}'
+                    bannerPreview: '{{ optional($organizer->media->where('collection', 'banner')->last())->url }}',
+                    avatarPreview: '{{ optional($organizer->media->where('collection', 'avatar')->last())->url }}'
                 }"
                 class="bg-slate-900 p-8 rounded-3xl border border-slate-700 space-y-10">
                 @csrf

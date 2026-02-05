@@ -5,12 +5,14 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\JoinCodeController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrganizerController;
 use App\Http\Controllers\PlayerRoomController;
 use App\Http\Controllers\TournamentController;
 use App\Http\Controllers\MatchResultController;
+use App\Http\Controllers\InstantResultController;
 use App\Http\Controllers\PlayerPaymentController;
 use App\Http\Controllers\PlayerProfileController;
 use App\Http\Controllers\TournamentJoinController;
@@ -19,7 +21,6 @@ use App\Http\Controllers\PlayerDashboardController;
 use App\Http\Controllers\PlayerTournamentController;
 use App\Http\Controllers\TournamentSeriesController;
 use App\Http\Controllers\PlayerNotificationController;
-use App\Http\Controllers\SettingsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -243,6 +244,25 @@ Route::middleware(['auth', 'role:organizer'])->group(function () {
     // 🌳 TREE VIEW (NEW)
     Route::get('/series/{series}/bracket', [TournamentSeriesController::class, 'bracket'])
         ->name('series.bracket');
+    // instent result
+    Route::get(
+        '/organizer/results/instant',
+        [InstantResultController::class, 'index']
+    )->name('instant.index');
+        Route::get(
+        '/organizer/results/codm/instant',
+        fn() => 'CODM Instant Result – Coming next step 🚀'
+    )->name('organizer.results.instant.codm');
+
+    Route::get(
+        '/organizer/results/instant',
+        [InstantResultController::class, 'create']
+    )->name('organizer.results.instant');
+
+    Route::post(
+        '/organizer/results/instant',
+        [InstantResultController::class, 'store']
+    )->name('organizer.results.instant.store');
 });
 
 Route::middleware(['auth', 'role:organizer'])
@@ -355,7 +375,5 @@ Route::middleware(['auth', 'role:player,organizer'])
 // 🔹 PLAYER JOIN TOURNAMENT
 Route::middleware(['auth'])->post('/tournaments/{id}/join', [TournamentController::class, 'join'])
     ->name('tournaments.join');
-
-
 
 require __DIR__ . '/auth.php';

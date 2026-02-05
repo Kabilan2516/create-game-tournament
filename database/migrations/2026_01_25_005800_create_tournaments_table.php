@@ -73,6 +73,9 @@ return new class extends Migration
             $table->index('game');
             $table->index('organizer_id');
 
+            // instant tornament and result 
+            $table->boolean('is_instant')->default(false);
+
             $table->timestamps();
         });
     }

@@ -135,7 +135,7 @@
             <div class="relative group float">
 
                 @if ($tournament->banner)
-                    <img src="{{ asset('storage/' . $tournament->banner->file_path) }}"
+                    <img src="{{ $tournament->banner->url ?? asset('storage/' . $tournament->banner->file_path) }}"
                         class="w-full h-96 object-cover rounded-3xl shadow-2xl border border-slate-700">
                 @else
                     <img src="{{ asset('images/tournament-default.jpg') }}"

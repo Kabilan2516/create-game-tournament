@@ -19,14 +19,14 @@ class OrganizerController extends Controller
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        // Media
-        $banner = optional(
-            $organizer->media->where('collection', 'banner')->last()
-        )->file_path;
+        // ✅ PASS FULL MEDIA OBJECTS
+        $banner = $organizer->media
+            ->where('collection', 'banner')
+            ->last();
 
-        $avatar = optional(
-            $organizer->media->where('collection', 'avatar')->last()
-        )->file_path;
+        $avatar = $organizer->media
+            ->where('collection', 'avatar')
+            ->last();
 
         return view('organizer.profile', [
             'user' => $user,
@@ -43,32 +43,37 @@ class OrganizerController extends Controller
         ]);
     }
 
-
-
-
     public function settings()
     {
         return view('organizer.settings');
     }
+    
     public function publicProfile(User $user)
     {
-        // Organizer basic info
-        $organizer = $user;
+        // ✅ Load organizer profile with media
+        $organizer = Organizer::with('media')
+            ->where('user_id', $user->id)
+            ->firstOrFail();
 
         // Stats
-        $totalTournaments = Tournament::where('organizer_id', $user->id)->count();
-        $totalPlayers = TournamentJoin::where('organizer_id', $user->id)->count();
-        $totalPrize = Tournament::where('organizer_id', $user->id)->sum('prize_pool');
+        $totalTournaments = Tournament::where('organizer_id', $organizer->id)->count();
+
+        $totalPlayers = TournamentJoin::whereHas('tournament', function ($q) use ($organizer) {
+            $q->where('organizer_id', $organizer->id);
+        })->count();
+
+        $totalPrize = Tournament::where('organizer_id', $organizer->id)
+            ->sum('prize_pool');
 
         // Upcoming tournaments
-        $upcoming = Tournament::where('organizer_id', $user->id)
+        $upcoming = Tournament::where('organizer_id', $organizer->id)
             ->whereIn('status', ['open', 'ongoing'])
             ->orderBy('start_time')
             ->take(6)
             ->get();
 
         // Completed tournaments
-        $completed = Tournament::where('organizer_id', $user->id)
+        $completed = Tournament::where('organizer_id', $organizer->id)
             ->where('status', 'completed')
             ->latest()
             ->take(5)
