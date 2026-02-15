@@ -66,9 +66,7 @@
                     text-yellow-300 px-4 py-2 rounded-xl mb-4 font-semibold">
             💰 Prize Pool:
             <span class="text-white">
-                ₹{{ number_format(
-                    ($tournament->first_prize ?? 0) + ($tournament->second_prize ?? 0) + ($tournament->third_prize ?? 0),
-                ) }}
+                ₹{{ number_format($tournament->prize_total) }}
             </span>
         </div>
     @elseif($tournament->reward_type === 'platform_points')

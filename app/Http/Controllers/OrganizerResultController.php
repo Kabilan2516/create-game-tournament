@@ -10,6 +10,7 @@ use App\Models\MatchResultEntry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\TournamentJoinMessage;
+use App\Models\TeamResult;
 
 class OrganizerResultController extends Controller
 {
@@ -96,6 +97,17 @@ class OrganizerResultController extends Controller
             return back()->withErrors(['error' => 'Invalid or empty results data']);
         }
 
+        $pointsConfig = config('points.codm');
+        $placementPoints = $pointsConfig['placement_points'] ?? [];
+        $killPoint = $pointsConfig['kill_point'] ?? 1;
+
+        $getPlacementPoints = function ($rank) use ($placementPoints) {
+            if (!$rank) {
+                return 0;
+            }
+            return $placementPoints[$rank] ?? 0;
+        };
+
         DB::beginTransaction();
 
         try {
@@ -117,8 +129,16 @@ class OrganizerResultController extends Controller
 
             // 🔁 RESET & INSERT (SAFE ALWAYS)
             MatchResultEntry::where('match_result_id', $matchResult->id)->delete();
+            TeamResult::where('match_result_id', $matchResult->id)->delete();
 
+            $teamBuckets = [];
             foreach ($results as $row) {
+                $rank = $row['rank'] ?? null;
+                $pp = $getPlacementPoints($rank);
+                $kp = ($row['kills'] ?? 0) * $killPoint;
+                $tt = $pp + $kp;
+                $cd = ((int) $rank === 1) ? 1 : 0;
+
                 MatchResultEntry::create([
                     'match_result_id' => $matchResult->id,
                     'tournament_join_id' => $row['tournament_join_id'],
@@ -129,6 +149,46 @@ class OrganizerResultController extends Controller
                     'kills' => $row['kills'] ?? 0,
                     'points' => $row['points'] ?? 0,
                     'winner_position' => $row['winner_position'],
+                    'kp' => $kp,
+                    'pp' => $pp,
+                    'tt' => $tt,
+                    'cd' => $cd,
+                ]);
+
+                $joinId = $row['tournament_join_id'];
+                $identityName = $row['team_name'] ?? $row['player_ign'] ?? null;
+                if (!isset($teamBuckets[$joinId])) {
+                    $teamBuckets[$joinId] = [
+                        'team_name' => $identityName,
+                        'rank' => $rank,
+                        'kp' => 0,
+                        'pp' => 0,
+                        'tt' => 0,
+                        'cd' => 0,
+                    ];
+                }
+
+                $teamBuckets[$joinId]['team_name'] = $identityName ?? $teamBuckets[$joinId]['team_name'];
+                $teamBuckets[$joinId]['rank'] = $teamBuckets[$joinId]['rank'] ?? $rank;
+                $teamBuckets[$joinId]['kp'] += $kp;
+                $teamBuckets[$joinId]['pp'] = max($teamBuckets[$joinId]['pp'], $pp);
+                $teamBuckets[$joinId]['tt'] += $kp;
+                $teamBuckets[$joinId]['cd'] = max($teamBuckets[$joinId]['cd'], $cd);
+            }
+
+            foreach ($teamBuckets as $joinId => $team) {
+                $team['tt'] = ($team['pp'] ?? 0) + ($team['kp'] ?? 0);
+
+                TeamResult::create([
+                    'match_result_id' => $matchResult->id,
+                    'tournament_join_id' => $joinId,
+                    'team_name' => $team['team_name'],
+                    'rank' => $team['rank'],
+                    'mp' => 1,
+                    'kp' => $team['kp'],
+                    'pp' => $team['pp'],
+                    'tt' => $team['tt'],
+                    'cd' => $team['cd'],
                 ]);
             }
 

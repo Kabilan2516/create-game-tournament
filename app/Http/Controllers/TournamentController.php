@@ -205,6 +205,7 @@ class TournamentController extends Controller
             'map' => 'required|string',
 
             'slots' => 'required|integer|min:2',
+            'substitute_count' => 'nullable|integer|min:0|max:10',
             'start_date' => 'required|date',
             'start_time_only' => 'required|date_format:H:i',
 
@@ -226,6 +227,10 @@ class TournamentController extends Controller
             'first_prize' => 'nullable|numeric|min:0',
             'second_prize' => 'nullable|numeric|min:0',
             'third_prize' => 'nullable|numeric|min:0',
+            'prize_positions' => 'nullable|array',
+            'prize_positions.*' => 'nullable|integer|min:1',
+            'prize_amounts' => 'nullable|array',
+            'prize_amounts.*' => 'nullable|numeric|min:0',
 
             // Payment
             'upi_id' => 'nullable|string',
@@ -275,6 +280,24 @@ class TournamentController extends Controller
                 'second_prize' => null,
                 'third_prize' => null,
             ]);
+        }
+
+        $prizes = collect();
+        if ($rewardType === 'organizer_prize') {
+            $positions = $request->input('prize_positions', []);
+            $amounts = $request->input('prize_amounts', []);
+
+            $prizes = collect($positions)->map(function ($pos, $index) use ($amounts) {
+                $position = (int) $pos;
+                $amount = isset($amounts[$index]) ? (float) $amounts[$index] : 0;
+
+                return [
+                    'position' => $position,
+                    'amount' => $amount,
+                ];
+            })->filter(function ($row) {
+                return $row['position'] > 0 && $row['amount'] >= 0;
+            })->unique('position')->sortBy('position')->values();
         }
 
         /*
@@ -334,6 +357,7 @@ class TournamentController extends Controller
 
             // Slots & Time
             'slots' => $request->slots,
+            'substitute_count' => (int) ($request->substitute_count ?? 0),
             'filled_slots' => 0,
 
             'start_time' => $startTime,
@@ -353,9 +377,12 @@ class TournamentController extends Controller
             'entry_fee' => $request->entry_fee ?? 0,
 
             // Prizes
-            'first_prize' => $request->first_prize,
-            'second_prize' => $request->second_prize,
-            'third_prize' => $request->third_prize,
+            'first_prize' => $prizes->firstWhere('position', 1)['amount'] ?? $request->first_prize,
+            'second_prize' => $prizes->firstWhere('position', 2)['amount'] ?? $request->second_prize,
+            'third_prize' => $prizes->firstWhere('position', 3)['amount'] ?? $request->third_prize,
+            'prize_pool' => $prizes->sum('amount') > 0
+                ? $prizes->sum('amount')
+                : (($request->first_prize ?? 0) + ($request->second_prize ?? 0) + ($request->third_prize ?? 0)),
 
             // Payment
             'upi_id' => $request->upi_id,
@@ -370,6 +397,10 @@ class TournamentController extends Controller
             // Status
             'status' => 'open',
         ]);
+
+        if ($rewardType === 'organizer_prize' && $prizes->isNotEmpty()) {
+            $tournament->prizes()->createMany($prizes->toArray());
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -438,6 +469,7 @@ class TournamentController extends Controller
 
             'mode' => 'required|in:solo,duo,squad',
             'slots' => 'required|integer|min:2',
+            'substitute_count' => 'nullable|integer|min:0|max:10',
 
             // Time
             'start_time' => 'required|date',
@@ -479,6 +511,7 @@ class TournamentController extends Controller
 
             'mode' => $request->mode,
             'slots' => $request->slots,
+            'substitute_count' => (int) ($request->substitute_count ?? 0),
 
             // Time (as Carbon)
             'start_time' => $startTime,
@@ -571,6 +604,22 @@ class TournamentController extends Controller
 
     public function joinForm(Tournament $tournament)
     {
+        $series = $tournament->series()
+            ->orderByDesc('tournament_series.id')
+            ->first();
+
+        if ($series) {
+            if ((bool) $series->is_published) {
+                return redirect()
+                    ->route('series.join.form', $series)
+                    ->with('success', 'This tournament is inside a series. Please register from series join page.');
+            }
+
+            return redirect()
+                ->route('tournaments.show', $tournament)
+                ->withErrors(['error' => 'This tournament belongs to a series that is not published yet.']);
+        }
+
         $now = now();
 
         // 🔐 BLOCK JOIN IF MATCH STARTED
@@ -635,6 +684,22 @@ class TournamentController extends Controller
     }
     public function joinStore(Request $request, Tournament $tournament)
     {
+        $series = $tournament->series()
+            ->orderByDesc('tournament_series.id')
+            ->first();
+
+        if ($series) {
+            if ((bool) $series->is_published) {
+                return redirect()
+                    ->route('series.join.form', $series)
+                    ->withErrors(['error' => 'This tournament uses series-based registration.']);
+            }
+
+            return redirect()
+                ->route('tournaments.show', $tournament)
+                ->withErrors(['error' => 'Series registration is currently not published.']);
+        }
+
         /* =====================================================
         BASIC CHECKS
         ===================================================== */
@@ -677,11 +742,16 @@ class TournamentController extends Controller
         /* =====================================================
         MODE LIMITS
         ===================================================== */
-        $limits = match (strtolower($tournament->mode)) {
-            'solo'  => ['min' => 1, 'max' => 1],
-            'duo'   => ['min' => 1, 'max' => 2],
-            'squad' => ['min' => 1, 'max' => 4],
+        $baseMax = match (strtolower($tournament->mode)) {
+            'solo' => 1,
+            'duo' => 2,
+            'squad' => 4,
+            default => 1,
         };
+        $limits = [
+            'min' => 1,
+            'max' => $baseMax + (int) ($tournament->substitute_count ?? 0),
+        ];
 
         /* =====================================================
         NORMALIZE MEMBERS

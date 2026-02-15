@@ -46,6 +46,11 @@
         <input type="number" name="slots" value="{{ $tournament->slots }}"
             class="px-4 py-3 rounded bg-slate-800 border border-slate-700">
 
+        <input type="number" name="substitute_count" min="0" max="10"
+            value="{{ $tournament->substitute_count ?? 0 }}"
+            class="px-4 py-3 rounded bg-slate-800 border border-slate-700"
+            placeholder="Substitutes per team">
+
         <input type="datetime-local" name="start_time"
             value="{{ $tournament->start_time->format('Y-m-d\TH:i') }}"
             class="px-4 py-3 rounded bg-slate-800 border border-slate-700">

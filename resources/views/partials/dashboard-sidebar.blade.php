@@ -20,11 +20,11 @@
             class="block px-4 py-3 rounded {{ request()->routeIs('series.index') ? 'bg-slate-800 text-cyan-400' : 'hover:bg-slate-800' }}">
             🌳 Tournament Series
         </a>
-{{-- 
+
         <a href="{{ route('instant.index') }}"
             class="block px-4 py-3 rounded {{ request()->routeIs('instant.index') ? 'bg-slate-800 text-cyan-400' : 'hover:bg-slate-800' }}">
             ⚡ Result Management
-        </a> --}}
+        </a>
 
         <a href="{{ route('tournaments.my') }}"
             class="block px-4 py-3 rounded {{ request()->routeIs('tournaments.my') ? 'bg-slate-800 text-cyan-400' : 'hover:bg-slate-800' }}">

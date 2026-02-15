@@ -9,11 +9,13 @@
         @php
             $canEdit = !$isMatchStarted && $join->status !== 'rejected';
 
-            $maxPlayers = match($join->mode) {
+            $basePlayers = match($join->mode) {
                 'solo' => 1,
                 'duo' => 2,
                 'squad' => 4,
             };
+            $substituteCount = (int) ($tournament->substitute_count ?? 0);
+            $maxPlayers = $basePlayers + $substituteCount;
 
             $players = collect([
                 [
@@ -49,6 +51,11 @@
                             <p class="text-sm text-gray-400">
                                 {{ $tournament->title }} • {{ strtoupper($join->mode) }}
                             </p>
+                            @if (!empty($series))
+                                <p class="text-xs text-cyan-300 mt-1">
+                                    Part of Series: {{ $series->title }}
+                                </p>
+                            @endif
                         </div>
 
                         <span class="px-4 py-2 rounded-full bg-slate-800 font-mono text-cyan-400">
@@ -127,6 +134,11 @@
                             <h3 class="text-lg font-bold">
                                 👥 Players ({{ $players->count() }} / {{ $maxPlayers }})
                             </h3>
+                            @if ($substituteCount > 0)
+                                <p class="text-xs text-gray-400 -mt-2">
+                                    Includes {{ $substituteCount }} substitute {{ $substituteCount > 1 ? 'slots' : 'slot' }}.
+                                </p>
+                            @endif
 
                             @foreach ($players as $index => $player)
                                 <div class="grid md:grid-cols-2 gap-4 bg-slate-800 p-4 rounded-xl">
@@ -226,6 +238,31 @@
                         <li>• Editing locks after match start</li>
                     </ul>
                 </div>
+
+                @if (!empty($series))
+                    <div class="bg-slate-900 p-6 rounded-2xl border border-cyan-700/40 mt-6">
+                        <h3 class="font-bold mb-3 text-cyan-300">🏆 Series Context</h3>
+                        <p class="text-sm text-gray-300 font-semibold">{{ $series->title }}</p>
+                        <p class="text-xs text-gray-400 mt-1">
+                            {{ strtoupper($series->mode ?? '-') }} • {{ $series->game ?? 'CODM' }}
+                        </p>
+                        <p class="text-sm text-gray-300 mt-3">
+                            Matches Done: <span class="text-green-400 font-semibold">{{ $seriesCompletedMatches }}</span>
+                            / {{ $seriesTotalMatches }}
+                        </p>
+
+                        <div class="mt-4 space-y-2">
+                            <a href="{{ route('series.public.show', $series) }}"
+                                class="block w-full text-center px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold">
+                                View Series Details
+                            </a>
+                            <a href="{{ route('series.results.public', $series) }}"
+                                class="block w-full text-center px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-sm font-semibold">
+                                View Overall Leaderboard
+                            </a>
+                        </div>
+                    </div>
+                @endif
             </div>
 
         </div>

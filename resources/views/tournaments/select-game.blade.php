@@ -24,6 +24,9 @@
                 <p class="text-gray-400">
                     Multiplayer & Battle Royale tournaments
                 </p>
+                <p class="text-xs text-cyan-400 mt-3">
+                    Dynamic prizes • CODM points system ready
+                </p>
             </a>
 
             <!-- PUBG (Coming Soon) -->

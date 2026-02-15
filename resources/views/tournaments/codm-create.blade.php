@@ -123,6 +123,17 @@
                             </select>
                         </div>
 
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-200 mb-2">
+                                🔁 Substitutes Per Team
+                            </label>
+                            <input type="number" name="substitute_count" min="0" max="10" value="0"
+                                class="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 w-full">
+                            <p class="text-xs text-gray-400 mt-2">
+                                Extra players allowed beyond base mode size.
+                            </p>
+                        </div>
+
                     </div>
 
                     <!-- RIGHT COLUMN -->
@@ -310,13 +321,16 @@
 
                     <h3 class="text-xl font-bold mb-4">🏆 Prize Distribution</h3>
 
-                    <div class="grid md:grid-cols-3 gap-6">
-                        <input type="number" name="first_prize" placeholder="1st Prize (₹)"
-                            class="px-4 py-3 rounded bg-slate-800 border border-slate-700">
-                        <input type="number" name="second_prize" placeholder="2nd Prize (₹)"
-                            class="px-4 py-3 rounded bg-slate-800 border border-slate-700">
-                        <input type="number" name="third_prize" placeholder="3rd Prize (₹)"
-                            class="px-4 py-3 rounded bg-slate-800 border border-slate-700">
+                    <div class="bg-slate-900/70 border border-slate-700 rounded-2xl p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <p class="text-sm text-gray-400">Add as many prize positions as you want.</p>
+                            <button type="button" id="add-prize-row"
+                                class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 font-semibold">
+                                + Add Position
+                            </button>
+                        </div>
+
+                        <div id="prize-rows" class="space-y-3"></div>
                     </div>
 
                 </div>
@@ -631,5 +645,43 @@ Get ready to compete, rank up, and prove your skills!`,
         }
     </script>
 
+    <script>
+        (function () {
+            const rows = document.getElementById('prize-rows');
+            const addBtn = document.getElementById('add-prize-row');
+
+            if (!rows || !addBtn) return;
+
+            function addRow(position = '', amount = '') {
+                const row = document.createElement('div');
+                row.className = 'grid md:grid-cols-3 gap-3 items-center';
+                row.innerHTML = `
+                    <input type="number" name="prize_positions[]" min="1" placeholder="Position (e.g. 1)"
+                        value="${position}"
+                        class="px-4 py-3 rounded bg-slate-800 border border-slate-700 w-full">
+                    <input type="number" name="prize_amounts[]" min="0" placeholder="Prize Amount (₹)"
+                        value="${amount}"
+                        class="px-4 py-3 rounded bg-slate-800 border border-slate-700 w-full">
+                    <button type="button"
+                        class="remove-prize-row px-4 py-3 rounded bg-red-700 hover:bg-red-800 font-semibold">
+                        Remove
+                    </button>
+                `;
+
+                row.querySelector('.remove-prize-row').addEventListener('click', () => {
+                    row.remove();
+                });
+
+                rows.appendChild(row);
+            }
+
+            addBtn.addEventListener('click', () => addRow());
+
+            // Default 1st, 2nd, 3rd
+            addRow(1, '');
+            addRow(2, '');
+            addRow(3, '');
+        })();
+    </script>
 
 @endsection

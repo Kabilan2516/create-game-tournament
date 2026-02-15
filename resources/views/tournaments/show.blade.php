@@ -4,7 +4,7 @@
 
 @section('meta')
     <meta property="og:title" content="{{ $tournament->title }}">
-    <meta property="og:description" content="🏆 Prize ₹{{ $tournament->prize }} | 📅 {{ $tournament->start_date }}">
+    <meta property="og:description" content="🏆 Prize ₹{{ number_format($tournament->prize_total) }} | 📅 {{ $tournament->start_time->format('d M Y, h:i A') }}">
     <meta property="og:image" content="{{ $tournament->banner_url }}">
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:type" content="website">
@@ -57,9 +57,7 @@
                     <div class="bg-black/40 p-4 rounded-xl text-center">
                         <p class="text-sm text-gray-400">Prize Pool</p>
                         <p class="text-xl font-bold text-yellow-300">
-                            ₹{{ number_format(
-                                ($tournament->first_prize ?? 0) + ($tournament->second_prize ?? 0) + ($tournament->third_prize ?? 0),
-                            ) }}
+                            ₹{{ number_format($tournament->prize_total) }}
                         </p>
                     </div>
 
@@ -192,33 +190,29 @@
                 </div>
 
                 <!-- PRIZE BREAKDOWN -->
-                @if ($tournament->first_prize || $tournament->second_prize || $tournament->third_prize)
+                @php
+                    $prizeList = $tournament->prizes()->orderBy('position')->get();
+                    if ($prizeList->isEmpty()) {
+                        $prizeList = collect([
+                            ['position' => 1, 'amount' => $tournament->first_prize],
+                            ['position' => 2, 'amount' => $tournament->second_prize],
+                            ['position' => 3, 'amount' => $tournament->third_prize],
+                        ])->filter(fn($p) => !is_null($p['amount']));
+                    }
+                @endphp
+
+                @if ($prizeList->isNotEmpty())
 
                     <div class="bg-slate-900 p-8 rounded-3xl border border-slate-700">
                         <h2 class="text-2xl font-bold mb-6">🏆 Prize Distribution</h2>
 
                         <div class="grid md:grid-cols-3 gap-6">
-
-                            @if ($tournament->first_prize)
-                                <div class="bg-yellow-400/10 p-6 rounded-xl text-center">
-                                    <p class="text-lg font-bold">🥇 1st Place</p>
-                                    <p class="text-yellow-300 text-xl">₹{{ $tournament->first_prize }}</p>
+                            @foreach ($prizeList as $prize)
+                                <div class="bg-slate-800/60 p-6 rounded-xl text-center">
+                                    <p class="text-lg font-bold">#{{ $prize['position'] }} Place</p>
+                                    <p class="text-yellow-300 text-xl">₹{{ $prize['amount'] }}</p>
                                 </div>
-                            @endif
-
-                            @if ($tournament->second_prize)
-                                <div class="bg-slate-700/40 p-6 rounded-xl text-center">
-                                    <p class="text-lg font-bold">🥈 2nd Place</p>
-                                    <p class="text-gray-200 text-xl">₹{{ $tournament->second_prize }}</p>
-                                </div>
-                            @endif
-
-                            @if ($tournament->third_prize)
-                                <div class="bg-orange-500/10 p-6 rounded-xl text-center">
-                                    <p class="text-lg font-bold">🥉 3rd Place</p>
-                                    <p class="text-orange-300 text-xl">₹{{ $tournament->third_prize }}</p>
-                                </div>
-                            @endif
+                            @endforeach
 
                         </div>
                     </div>

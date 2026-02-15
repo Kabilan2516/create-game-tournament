@@ -136,9 +136,7 @@
                     <div class="bg-slate-800 p-4 rounded-xl text-center">
                         <p class="text-sm text-gray-400">Prize Pool</p>
                         <p class="font-bold text-yellow-300">
-                            ₹{{ number_format(
-                                ($tournament->first_prize ?? 0) + ($tournament->second_prize ?? 0) + ($tournament->third_prize ?? 0),
-                            ) }}
+                            ₹{{ number_format($tournament->prize_total) }}
                         </p>
                     </div>
 

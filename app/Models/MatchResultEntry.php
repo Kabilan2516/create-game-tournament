@@ -19,12 +19,20 @@ class MatchResultEntry extends Model
         'kills',
         'points',
         'winner_position',
+        'kp',
+        'pp',
+        'tt',
+        'cd',
     ];
 
     protected $casts = [
         'rank'   => 'integer',
         'kills'  => 'integer',
         'points' => 'integer',
+        'kp'     => 'integer',
+        'pp'     => 'integer',
+        'tt'     => 'integer',
+        'cd'     => 'integer',
     ];
 
     /* =========================

@@ -79,11 +79,16 @@ class TournamentJoinController extends Controller
         /* =========================
        MODE RULES
     ========================= */
-        $limits = match ($tournament->mode) {
-            'solo'  => ['min' => 1, 'max' => 1],
-            'duo'   => ['min' => 1, 'max' => 2],   // 👈 allow 1 or 2
-            'squad' => ['min' => 1, 'max' => 4],   // 👈 allow 1–4
+        $baseMax = match ($tournament->mode) {
+            'solo' => 1,
+            'duo' => 2,
+            'squad' => 4,
+            default => 1,
         };
+        $limits = [
+            'min' => 1,
+            'max' => $baseMax + (int) ($tournament->substitute_count ?? 0),
+        ];
 
         /* =========================
        SLOT CHECK

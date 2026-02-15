@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Carbon\Carbon;
+use App\Models\TournamentPrize;
+use App\Models\TournamentSeries;
 
 class Tournament extends Model
 {
@@ -21,6 +23,7 @@ class Tournament extends Model
         'entry_fee',
         'prize_pool',
         'slots',
+        'substitute_count',
         'filled_slots',
         'start_time',
         'registration_close_time',
@@ -45,6 +48,7 @@ class Tournament extends Model
         'third_prize'   => 'float',
         'entry_fee'     => 'float',
         'prize_pool'    => 'float',
+        'substitute_count' => 'integer',
         'start_time'    => 'datetime',
         'registration_close_time' => 'datetime',
         'is_featured'   => 'boolean',
@@ -76,6 +80,24 @@ class Tournament extends Model
     public function joins()
     {
         return $this->hasMany(TournamentJoin::class);
+    }
+
+    public function prizes()
+    {
+        return $this->hasMany(TournamentPrize::class)->orderBy('position');
+    }
+
+    public function getPrizeTotalAttribute(): float
+    {
+        if ($this->relationLoaded('prizes') && $this->prizes->isNotEmpty()) {
+            return (float) $this->prizes->sum('amount');
+        }
+
+        if ($this->prizes()->exists()) {
+            return (float) $this->prizes()->sum('amount');
+        }
+
+        return (float) (($this->first_prize ?? 0) + ($this->second_prize ?? 0) + ($this->third_prize ?? 0));
     }
 
     public function getStartsSoonAttribute()
@@ -122,5 +144,13 @@ class Tournament extends Model
     public function matchResults()
     {
         return $this->hasMany(MatchResult::class);
+    }
+
+    public function series()
+    {
+        return $this->belongsToMany(
+            TournamentSeries::class,
+            'tournament_series_tournaments'
+        );
     }
 }

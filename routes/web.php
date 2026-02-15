@@ -112,6 +112,15 @@ Route::get('/password-reset/{token}', function (Request $request, $token) {
 Route::get('/tournaments', [TournamentController::class, 'index'])
     ->name('tournaments.index');
 
+Route::get('/series/browse', [TournamentSeriesController::class, 'publicIndex'])
+    ->name('series.public.index');
+Route::get('/series/{series}/details', [TournamentSeriesController::class, 'publicShow'])
+    ->name('series.public.show');
+Route::get('/series/{series}/join', [TournamentSeriesController::class, 'joinForm'])
+    ->name('series.join.form');
+Route::post('/series/{series}/join', [TournamentSeriesController::class, 'joinStore'])
+    ->name('series.join.store');
+
 Route::get('/tournaments/{tournament}', [TournamentController::class, 'show'])
     ->name('tournaments.show');
 // Public Join Page (No Login Required)
@@ -128,6 +137,12 @@ Route::get(
     '/tournaments/{tournament}/results',
     [TournamentController::class, 'showresult']
 )->name('tournaments.results.show');
+
+// Public Series Results
+Route::get(
+    '/series/{series}/results',
+    [TournamentSeriesController::class, 'publicResults']
+)->name('series.results.public');
 
 // 🔹 ORGANIZER ROUTES (ONLY LOGGED IN + ORGANIZER ROLE)
 Route::middleware(['auth', 'role:organizer'])->group(function () {
@@ -230,6 +245,12 @@ Route::middleware(['auth', 'role:organizer'])->group(function () {
     Route::post('/series', [TournamentSeriesController::class, 'store'])
         ->name('series.store');
 
+    Route::get('/series/instant/create', [TournamentSeriesController::class, 'createInstant'])
+        ->name('series.instant.create');
+
+    Route::post('/series/instant', [TournamentSeriesController::class, 'storeInstant'])
+        ->name('series.instant.store');
+
     Route::get('/series/{series}', [TournamentSeriesController::class, 'show'])
         ->name('series.show');
 
@@ -238,6 +259,9 @@ Route::middleware(['auth', 'role:organizer'])->group(function () {
 
     Route::post('/series/{series}/points', [TournamentSeriesController::class, 'savePoints'])
         ->name('series.points.save');
+
+    Route::post('/series/{series}/publish', [TournamentSeriesController::class, 'setPublished'])
+        ->name('series.publish');
 
     Route::post('/series/{series}/calculate', [TournamentSeriesController::class, 'calculateStandings'])
         ->name('series.calculate');
@@ -249,15 +273,23 @@ Route::middleware(['auth', 'role:organizer'])->group(function () {
         '/organizer/results/instant',
         [InstantResultController::class, 'index']
     )->name('instant.index');
-        Route::get(
+    Route::get(
         '/organizer/results/codm/instant',
-        fn() => 'CODM Instant Result – Coming next step 🚀'
+        [InstantResultController::class, 'codm']
     )->name('organizer.results.instant.codm');
+    Route::post(
+        '/organizer/results/instant/dummy',
+        [InstantResultController::class, 'dummy']
+    )->name('organizer.results.instant.dummy');
+    Route::get(
+        '/organizer/results/instant/series-context',
+        [InstantResultController::class, 'seriesContext']
+    )->name('organizer.results.instant.series_context');
 
     Route::get(
-        '/organizer/results/instant',
+        '/organizer/results/instant/create',
         [InstantResultController::class, 'create']
-    )->name('organizer.results.instant');
+    )->name('organizer.results.instant.create');
 
     Route::post(
         '/organizer/results/instant',

@@ -141,16 +141,43 @@
             <h3 class="font-bold mb-4">📌 Series Info</h3>
 
             <ul class="text-sm text-gray-400 space-y-2">
+                <li>• Game: {{ $series->game ?? 'CODM' }}</li>
                 <li>• Mode: {{ strtoupper($series->mode) }}</li>
+                <li>• Match Type: {{ $series->match_type ?? '—' }}</li>
+                <li>• Map: {{ $series->map ?? '—' }}</li>
+                <li>• Reward: {{ strtoupper($series->reward_type ?? 'FREE') }}</li>
+                <li>• Prize Pool: ₹{{ number_format($series->prize_total) }}</li>
                 <li>• Organizer-controlled series</li>
                 <li>• Points combined across tournaments</li>
                 <li>• Ranking auto-calculated</li>
             </ul>
         </div>
 
+        @php
+            $seriesPrizes = $series->prizes()->orderBy('position')->get();
+        @endphp
+        @if ($seriesPrizes->isNotEmpty())
+            <div class="bg-slate-900 p-6 rounded-2xl border border-slate-700">
+                <h3 class="font-bold mb-4">🏆 Series Prizes</h3>
+                <div class="space-y-2 text-sm text-gray-300">
+                    @foreach ($seriesPrizes as $prize)
+                        <div class="flex justify-between bg-slate-800 rounded-xl px-4 py-2">
+                            <span>#{{ $prize->position }}</span>
+                            <span class="text-yellow-300 font-semibold">₹{{ $prize->amount }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         <!-- FUTURE ACTIONS -->
         <div class="bg-slate-900 p-6 rounded-2xl border border-slate-700 space-y-4">
             <h3 class="font-bold">⚙️ Actions</h3>
+
+            <a href="{{ route('organizer.results.instant.codm', ['series_id' => $series->id]) }}"
+               class="w-full block text-center py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-semibold">
+                ➕ Insert Match Data
+            </a>
 
             <button class="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600">
                 📥 Export Leaderboard (CSV)

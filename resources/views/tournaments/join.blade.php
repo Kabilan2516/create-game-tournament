@@ -4,6 +4,17 @@
 
 @section('content')
 
+    @php
+        $baseTeamSize = match (strtolower($tournament->mode)) {
+            'solo' => 1,
+            'duo' => 2,
+            'squad' => 4,
+            default => 1,
+        };
+        $substituteCount = (int) ($tournament->substitute_count ?? 0);
+        $maxTeamSize = $baseTeamSize + $substituteCount;
+    @endphp
+
     <!-- 🔹 HERO / BANNER -->
     <section class="relative bg-black">
 
@@ -34,12 +45,18 @@
                 <h2 class="text-3xl font-bold mb-8">🎯 Player / Team Registration</h2>
 
                 <form method="POST" action="{{ route('tournaments.join.store', $tournament) }}"
-                    enctype="multipart/form-data" class="space-y-8" x-data="joinForm('{{ strtolower($tournament->mode) }}')">
+                    enctype="multipart/form-data" class="space-y-8" x-data="joinForm('{{ strtolower($tournament->mode) }}', {{ $maxTeamSize }})">
 
                     @csrf
                     <p class="text-gray-300">
                         👥 Mode:
                         <span class="font-bold text-white">{{ strtoupper($tournament->mode) }}</span>
+                    </p>
+                    <p class="text-sm text-gray-400 -mt-4">
+                        Base Team Size: {{ $baseTeamSize }}
+                        @if ($substituteCount > 0)
+                            • Substitutes Allowed: {{ $substituteCount }} • Max Total: {{ $maxTeamSize }}
+                        @endif
                     </p>
 
 
@@ -175,9 +192,7 @@
                         <p>🎮 Game: <span class="text-white">{{ $tournament->game }}</span></p>
                         <p>👥 Mode: <span class="text-white">{{ ucfirst($tournament->mode) }}</span></p>
                         <p>💰 Prize Pool: <span class="text-yellow-300">
-                                ₹{{ number_format(
-                                    ($tournament->first_prize ?? 0) + ($tournament->second_prize ?? 0) + ($tournament->third_prize ?? 0),
-                                ) }}</span>
+                                ₹{{ number_format($tournament->prize_total) }}</span>
                         </p>
 
                         @if ($isFree)
@@ -217,26 +232,18 @@
 
     <!-- 🔹 ALPINE LOGIC -->
     <script>
-        function joinForm(mode) {
+        function joinForm(mode, maxMembers) {
             return {
                 members: [],
 
                 init() {
-                    this.setupMembers(mode);
+                    this.setupMembers(maxMembers);
                 },
 
-                setupMembers(mode) {
-                    if (mode === 'solo') {
-                        this.members = [{}]; // Captain only
-                    }
-
-                    if (mode === 'duo') {
-                        this.members = [{}, {}]; // Captain + 1
-                    }
-
-                    if (mode === 'squad') {
-                        this.members = [{}, {}, {}, {}]; // Captain + 3
-                    }
+                setupMembers(maxMembers) {
+                    this.members = Array.from({
+                        length: Math.max(1, parseInt(maxMembers || 1, 10))
+                    }, () => ({}));
                 }
             }
         }

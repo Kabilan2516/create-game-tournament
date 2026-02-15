@@ -12,6 +12,10 @@
         <span class="text-white font-semibold">{{ $tournament->title }}</span>
         • Mode:
         <span class="text-cyan-400 font-semibold">{{ strtoupper($tournament->mode) }}</span>
+        • Max Players/Team:
+        <span class="text-emerald-400 font-semibold">
+            {{ match ($tournament->mode) { 'solo' => 1, 'duo' => 2, 'squad' => 4, default => 1 } + (int) ($tournament->substitute_count ?? 0) }}
+        </span>
     </p>
 
     <div class="flex gap-4 mt-4">
@@ -56,7 +60,8 @@
  CONFIG
 ========================= */
 const MODE = "{{ $tournament->mode }}";
-const MAX_MEMBERS = MODE === 'solo' ? 1 : (MODE === 'duo' ? 2 : 4);
+const SUBSTITUTE_COUNT = {{ (int) ($tournament->substitute_count ?? 0) }};
+const MAX_MEMBERS = (MODE === 'solo' ? 1 : (MODE === 'duo' ? 2 : 4)) + SUBSTITUTE_COUNT;
 const STORAGE_KEY = 'manual_join_draft_{{ $tournament->id }}';
 
 let teamIndex = 0;

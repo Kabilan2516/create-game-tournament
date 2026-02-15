@@ -18,16 +18,7 @@ class JoinCodeController extends Controller
     }
     public function show(TournamentJoin $join)
     {
-        $tournament = $join->tournament;
-
-        $isMatchStarted = now()->greaterThanOrEqualTo($tournament->start_time);
-
-        return view('join-code.view', compact(
-            'join',
-            'tournament',
-            'canEdit',
-            'isMatchStarted'
-        ));
+        return $this->renderJoinView($join);
     }
 
     /* =========================
@@ -54,20 +45,7 @@ class JoinCodeController extends Controller
             ]);
         }
 
-        $tournament = $join->tournament;
-
-        $isMatchStarted = now()->greaterThanOrEqualTo($tournament->start_time);
-
-        $canEdit =
-            !$isMatchStarted &&
-            in_array($join->status, ['pending', 'approved']);
-
-        return view('join-code.view', compact(
-            'join',
-            'tournament',
-            'canEdit',
-            'isMatchStarted'
-        ));
+        return $this->renderJoinView($join);
     }
 
 
@@ -84,11 +62,16 @@ class JoinCodeController extends Controller
             ]);
         }
 
-        $limits = match ($join->mode) {
-            'solo'  => ['min' => 1, 'max' => 1],
-            'duo'   => ['min' => 1, 'max' => 2],
-            'squad' => ['min' => 1, 'max' => 4],
+        $baseMax = match ($join->mode) {
+            'solo' => 1,
+            'duo' => 2,
+            'squad' => 4,
+            default => 1,
         };
+        $limits = [
+            'min' => 1,
+            'max' => $baseMax + (int) ($tournament->substitute_count ?? 0),
+        ];
 
         $request->validate([
             'team_name' => 'nullable|string|max:255',
@@ -140,5 +123,41 @@ class JoinCodeController extends Controller
         return redirect()
             ->route('join.code.show', $join)
             ->with('success', '✅ Team updated successfully');
+    }
+
+    private function renderJoinView(TournamentJoin $join)
+    {
+        $join->loadMissing(['tournament', 'members', 'messages' => fn($q) => $q->orderBy('created_at')]);
+
+        $tournament = $join->tournament;
+        $isMatchStarted = now()->greaterThanOrEqualTo($tournament->start_time);
+        $canEdit = !$isMatchStarted && in_array($join->status, ['pending', 'approved'], true);
+
+        $series = $tournament->series()
+            ->with([
+                'tournaments' => function ($q) {
+                    $q->orderBy('start_time')
+                        ->with(['matchResult' => fn($mq) => $mq->where('is_locked', true)]);
+                }
+            ])
+            ->orderByDesc('tournament_series.id')
+            ->first();
+
+        $seriesCompletedMatches = 0;
+        $seriesTotalMatches = 0;
+        if ($series) {
+            $seriesTotalMatches = $series->tournaments->count();
+            $seriesCompletedMatches = $series->tournaments->filter(fn($m) => !is_null($m->matchResult))->count();
+        }
+
+        return view('join-code.view', compact(
+            'join',
+            'tournament',
+            'canEdit',
+            'isMatchStarted',
+            'series',
+            'seriesCompletedMatches',
+            'seriesTotalMatches'
+        ));
     }
 }

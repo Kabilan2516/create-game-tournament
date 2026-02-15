@@ -13,24 +13,35 @@
                 prizes, and climb the leaderboard.</p>
         </div>
     </section>
-    <div class="bg-slate-900 border-b border-slate-800">
-        <div class="max-w-7xl mx-auto px-6 flex space-x-6 py-4">
+    <div class="bg-slate-950/90 border-b border-slate-800 backdrop-blur">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="inline-flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-xl p-1">
+                <a href="{{ route('tournaments.index') }}"
+                    class="px-4 py-2 rounded-lg text-sm font-semibold transition {{ request()->routeIs('tournaments.index') ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20' : 'text-gray-300 hover:text-white hover:bg-slate-800' }}">
+                    🎮 Tournaments
+                </a>
+                <a href="{{ route('series.public.index') }}"
+                    class="px-4 py-2 rounded-lg text-sm font-semibold transition text-gray-300 hover:text-white hover:bg-slate-800">
+                    🏆 Series
+                </a>
+            </div>
 
-            <a href="{{ route('tournaments.index', ['tab' => 'upcoming']) }}"
-                class="font-semibold {{ request('tab', 'upcoming') == 'upcoming' ? 'text-cyan-400' : 'text-gray-400' }}">
-                ⏳ Upcoming
-            </a>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('tournaments.index', ['tab' => 'upcoming']) }}"
+                    class="px-3 py-2 rounded-lg text-sm font-semibold border transition {{ request('tab', 'upcoming') == 'upcoming' ? 'bg-cyan-500/15 border-cyan-400 text-cyan-300' : 'bg-slate-900 border-slate-700 text-gray-300 hover:border-cyan-500/40 hover:text-cyan-300' }}">
+                    ⏳ Upcoming
+                </a>
 
-            <a href="{{ route('tournaments.index', ['tab' => 'ongoing']) }}"
-                class="font-semibold {{ request('tab') == 'ongoing' ? 'text-cyan-400' : 'text-gray-400' }}">
-                🔴 Ongoing
-            </a>
+                <a href="{{ route('tournaments.index', ['tab' => 'ongoing']) }}"
+                    class="px-3 py-2 rounded-lg text-sm font-semibold border transition {{ request('tab') == 'ongoing' ? 'bg-red-500/15 border-red-400 text-red-300' : 'bg-slate-900 border-slate-700 text-gray-300 hover:border-red-500/40 hover:text-red-300' }}">
+                    🔴 Ongoing
+                </a>
 
-            <a href="{{ route('tournaments.index', ['tab' => 'completed']) }}"
-                class="font-semibold {{ request('tab') == 'completed' ? 'text-cyan-400' : 'text-gray-400' }}">
-                ✅ Completed
-            </a>
-
+                <a href="{{ route('tournaments.index', ['tab' => 'completed']) }}"
+                    class="px-3 py-2 rounded-lg text-sm font-semibold border transition {{ request('tab') == 'completed' ? 'bg-emerald-500/15 border-emerald-400 text-emerald-300' : 'bg-slate-900 border-slate-700 text-gray-300 hover:border-emerald-500/40 hover:text-emerald-300' }}">
+                    ✅ Completed
+                </a>
+            </div>
         </div>
     </div>
     <!-- 🔹 FILTER + SEARCH BAR -->
